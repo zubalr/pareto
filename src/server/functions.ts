@@ -119,7 +119,7 @@ export const getExplorerData = createServerFn()
 
       // Select requested benchmark or default to Terminal-Bench 4.0
       let activeBenchmark =
-        benchmarkOptions.find((b) => b.id === data.benchmarkVersionId) ||
+        benchmarkOptions.find((b) => b.id === data.benchmarkVersionId || b.benchmarkSlug === data.benchmarkVersionId) ||
         benchmarkOptions.find((b) => b.benchmarkSlug === "terminal-bench" && b.version === "4.0") ||
         benchmarkOptions[0] ||
         null;

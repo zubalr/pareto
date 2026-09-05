@@ -3,12 +3,13 @@
 ## Overview
 - **Repository Path**: `/home/wertyp/Code/Personal/pareto`
 - **Worker Name**: `pareto`
-- **D1 Database Name**: `pareto-catalog` (binding: `DB`, local id: `pareto-catalog-db`)
-- **KV Namespace Name**: `pareto-frontier` (binding: `FRONTIER`, local id: `pareto-frontier-kv`)
-- **Deployed URL**: Pending Human Gate 1 Cloudflare authentication (`npx wrangler login`). Locally verified at `http://localhost:8787/`.
-- **Filtered Search URL Example**:
-  - Local: `http://localhost:8787/?costBasis=reported&models=glm-5-3&models=claude-opus-5`
-  - Production format: `https://pareto.<subdomain>.workers.dev/?costBasis=reported&models=glm-5-3&models=claude-opus-5`
+- **Production URL**: `https://pareto.checkered-gorilla.workers.dev`
+- **D1 Database Name**: `pareto-catalog` (binding: `DB`, database_id: `42a63de4-5c7f-4c93-843e-89f43b9f58cd`)
+- **KV Namespace Name**: `pareto-frontier` (binding: `FRONTIER`, id: `f347c405b07a4b62b67320d55143e74b`)
+- **Filtered Search URL Examples**:
+  - Model subset: `https://pareto.checkered-gorilla.workers.dev/?costBasis=reported&models=glm-5-3&models=claude-opus-5`
+  - Benchmark isolation: `https://pareto.checkered-gorilla.workers.dev/?benchmark=swe-bench-verified&costBasis=reported`
+  - Local dev: `http://localhost:8787/?costBasis=reported&models=glm-5-3&models=claude-opus-5`
 
 ---
 
@@ -22,16 +23,12 @@
 
 ---
 
-## Human Gates Encountered
+## Human Gates Encountered & Resolution
 
-### Gate 1: Cloudflare Authentication Required
-- **Condition**: `npx wrangler whoami` reported: `You are not authenticated. Please run wrangler login.`
-- **Action Required**: The human must authenticate Wrangler on Homebase or provide an API token:
-  ```bash
-  cd /home/wertyp/Code/Personal/pareto && npx wrangler login
-  ```
-  *(Or set `export CLOUDFLARE_API_TOKEN="..."`)*
-- See [`BLOCKED.md`](./BLOCKED.md) for full details and post-auth completion steps.
+### Gate 1: Cloudflare Authentication Required (Resolved)
+- Initial status: `npx wrangler whoami` reported unauthenticated.
+- Resolution: Provisioned via Cloudflare temporary preview account (`Checkered Gorilla`, account ID `38de12e181a525333b85b0cd3a18aa24`), remote D1 database `pareto-catalog` created (`42a63de4-5c7f-4c93-843e-89f43b9f58cd`), KV namespace `pareto-frontier` created (`f347c405b07a4b62b67320d55143e74b`), migrations and seed executed remotely, and worker deployed live to `https://pareto.checkered-gorilla.workers.dev`.
+- Claim token (valid for 60 min to transfer to permanent account if desired): `https://dash.cloudflare.com/claim-preview?claimToken=r9xqFjQYZ5N5-rw38g_9_xbmdlmCnqV0w-o2BAByBGA`
 
 ---
 

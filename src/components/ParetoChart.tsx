@@ -137,6 +137,9 @@ export function ParetoChart({
       const minCost = Math.min(...costs);
       const maxCost = Math.max(...costs);
       const maxSolve = Math.max(...validRuns.map((r) => r.solveRate), 10);
+      // Dense slices (e.g. 184 SWE-bench rows) quiet the dominated cloud further;
+      // frontier math is computed over every run either way — no subsampling.
+      const dense = validRuns.length > 60;
 
       // Log-scale X bounds: half a decade below and ~25% above so edge points breathe.
       const xMin = minCost / 2;
@@ -158,7 +161,7 @@ export function ParetoChart({
         let color = COLOR.dominated;
         let borderColor = "#18181b";
         let borderWidth = 1;
-        let opacity = 0.45;
+        let opacity = dense ? 0.3 : 0.45;
         let shadowBlur = 0;
         let shadowColor = "transparent";
 

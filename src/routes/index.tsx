@@ -7,6 +7,7 @@ import { ParetoChart } from "../components/ParetoChart";
 import { PassAtKChart, EffortChart, ResourceChart } from "../components/ChartSlots";
 import { DataTable } from "../components/DataTable";
 import { FilterRail } from "../components/FilterRail";
+import { IngestHealthStrip } from "../components/IngestHealthStrip";
 import type { ExplorerRun } from "../server/functions";
 
 const searchSchema = z.object({
@@ -304,28 +305,58 @@ function ExplorerPage() {
     return Array.from(m.values()).filter((s) => s.size >= 2).length;
   })();
   const costedCount = data.allRuns.filter((r) => r.hasCost && r.cost !== null && r.cost > 0).length;
+  // Seed banner only on slices that actually contain compiled/seed rows (Phase 4
+  // acceptance). All-official slices get a lighter ingest note instead.
+  const seedRows = data.allRuns.filter((r) => !r.sourceOfficial).length;
+  const officialRows = data.allRuns.length - seedRows;
+  const sliceIsPureSeedMix = seedRows > 0;
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-[#09090b]">
-      {/* Compiled leaderboards notice banner — required disclaimer */}
+      {/* Composition-aware notice banner: seed disclaimer only on seed-containing slices */}
       <div className="bg-zinc-900/90 border-b border-zinc-800 px-4 py-1.5 text-[11px] flex items-center justify-between gap-4 text-zinc-400">
         <div className="flex items-center gap-2">
-          <span className="text-amber-400 font-bold tracking-wide">NOTE</span>
-          <span>
-            Numbers are compiled from public leaderboards &amp; seed fixtures — illustrative eval
-            runs, <span className="text-zinc-200">not an official leaderboard</span>.
-          </span>
+          {sliceIsPureSeedMix ? (
+            <>
+              <span className="text-amber-400 font-bold tracking-wide">NOTE</span>
+              <span>
+                Numbers are compiled from public leaderboards &amp; seed fixtures — illustrative
+                eval runs, <span className="text-zinc-200">not an official leaderboard</span>.
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-emerald-400 font-bold tracking-wide">SOURCE</span>
+              <span>
+                {data.allRuns.length} runs ingested from official leaderboards —{" "}
+                <span className="text-zinc-200">aggregates only</span>, not an independent
+                evaluation.
+              </span>
+            </>
+          )}
         </div>
         <div className="hidden md:flex items-center gap-2 text-[10px] text-zinc-500 font-mono">
+          {seedRows > 0 && (
+            <>
+              <span>{seedRows} compiled</span>
+              <span>&bull;</span>
+            </>
+          )}
+          {officialRows > 0 && (
+            <>
+              <span>{officialRows} official</span>
+              <span>&bull;</span>
+            </>
+          )}
           <span>no benchmark task text stored</span>
-          <span>&bull;</span>
-          <span>single-benchmark isolation</span>
           <span>&bull;</span>
           <a href="/methodology" className="underline hover:text-zinc-300">
             methodology
           </a>
         </div>
       </div>
+
+      <IngestHealthStrip />
 
       {/* Main Content: Filter Rail + Chart + Table */}
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">

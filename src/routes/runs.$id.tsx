@@ -13,12 +13,13 @@ export const Route = createFileRoute("/runs/$id")({
     pins:
       search.pins === undefined || search.pins === null ? undefined : String(search.pins),
   }),
-  loader: async ({ params, search }) => {
+  loaderDeps: ({ search }) => ({ pins: search.pins }),
+  loader: async ({ params, deps }) => {
     const data = await getRunDossier({ data: { id: params.id } });
     if (!data.run) {
       throw notFound({ routeId: "/runs/$id" });
     }
-    return { ...data, pins: parseListParam(search.pins) };
+    return { ...data, pins: parseListParam(deps.pins) };
   },
   notFoundComponent: RunNotFound,
   component: RunDossierPage,

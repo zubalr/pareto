@@ -375,3 +375,21 @@ Compare in nav, health-strip cost-coverage counts. DeepSWE went live mid-QA
 | 44 | Keyboard: filter rail (selects/checkboxes/radios/inputs/buttons) and table model links are natively tabbable and Enter-activatable; every datum is reachable without a pointer (chart hover is the only pointer-only affordance, and the table carries the same data) | PASS |
 | 45 | Compare same-bench re-check on new deploy; dossier 200/404 re-check | PASS |
 | 46 | `pnpm test --run` | PASS (67 tests incl. floor-intent + health-count additions) |
+
+### Phase 7 — launch polish QA (production `7ccf9f64`, 2026-09-07)
+
+Shipped: `public/og.png` (1200×630, rendered from og.svg via rsvg-convert — frontier
+polyline + knee on the dark board), og:image/twitter:image repointed to the PNG with
+explicit dimensions, og/twitter descriptions now name DeepSWE alongside Terminal-Bench,
+Harbor, Aider, and SWE-bench, README live-board badges, Compare added to home nav.
+
+| # | Check | Result |
+|---|---|---|
+| 47 | `/og.png` production: 200, image/png, 32 KB, 1200×630; og:image and twitter:image point at it (SVG kept in repo) | PASS |
+| 48 | Meta copy names DeepSWE alongside TB / Harbor / Aider / SWE in og:description and twitter:description; no LiveCodeBench/FrontierSWE claims | PASS |
+| 49 | README live-board badge (shields) + Today-basis badge at top, linking to the board and the Today view | PASS (local; see #51) |
+| 50 | GitHub repo page (github.com/zubalr/pareto): LICENSE Apache-2.0 visible, README renders with the live URL link, CONTRIBUTING.md listed | PASS |
+| 51 | GitHub README badge: **needs Agy push** — the pushed README predates the badge commit (`324fd7a`); badge renders locally and will appear on push | NOTE |
+| 52 | DeepSWE in benchmark selector on production: listed and `[selected]` on its canonical URL — no stale-TB fallback (an earlier read of "fallback" was a regex misread of `benchmarkOptions[0]`) | PASS |
+| 53 | Finder cheapest-at-floor + Today-honesty re-verified after meta deploy (DeepSWE floor: deepseek-v4-flash 53.3% @ $0.10; Today: 45/70 restated-only, knee GPT-5.6 Luna) | PASS |
+| 54 | `pnpm test --run` | PASS (67) |

@@ -326,3 +326,29 @@ brief this QA ran locally; the patch needs deploy.
   `SquareTerminal`/`Gauge`/`CircleDollarSign`/`RotateCcw` in the rail). No emoji in UI
   chrome (the Phase 1 `⚡` glyph was replaced by the `Zap` icon; the favicon is now an
   inline SVG of the frontier polyline + knee dot).
+
+### Phase 4 QA — run dossiers, new-bench slices, ingest health
+
+Surfaces: `/runs/$id` dossier; composition-aware banner; ingest-health strip;
+dossier nav (table model links, chart shift+click, Finder/model-page links).
+Deployed as `f0794b7` → production version `9c086423`; QA below ran on
+production unless noted. Actuals differ from the brief's snapshot: the Harbor TB2
+slice holds **24** runs at QA time (18 plotted cost-bearing at first check; brief
+said 18) and SWE-bench Verified holds **184** rows in the Explorer payload
+(180 SWE-bench Experiments + 4 Seed Compiled; earlier SSR snapshot showed
+180+8 — KV TTL lag). Isolation holds either way: every query is per
+benchmark version, so cross-bench mixing is structurally impossible.
+
+| # | Check (production) | Result |
+|---|---|---|
+| 23 | TB 4.0 default: knee still GLM-5.3 (Claude Code · max · $40.91/task), seed banner with "10 compiled" | PASS |
+| 24 | TB 2.0 slice: 18 visible runs, all `Harbor / Terminal-Bench Leaderboard`, knee GPT-6 Astra; **official-source banner** ("18 runs ingested from official leaderboards") replaces the seed banner; no seed rows | PASS |
+| 25 | SWE-bench Verified slice: 184 visible (experiments + seed-compiled, same bench version), seed banner + "compiled/official" counts; scatter shows only 4/184 (cost-bearing rows only — coverage rule keeps it readable); knee recomputed (GPT-5.6 Sol $2.2/task); no Aider/TB4 rows | PASS |
+| 26 | `/runs/$id` production: real id → 200, bogus id → 404 (rendered not-found card) | PASS |
+| 27 | Dossier content (Harbor run): reported $49.50/task **primary**, restated $465/task as separate coverage-gated number with "+839% vs reported", pass@k inline (k2/k3/k4), p50 2796.3s, tokens, 5 coverage chips, official source attribution with sourceRunId | PASS |
+| 28 | Dossier → "Open on the Explorer board →" returns to the same bench with pins preserved; "Compare pins" appears only with ≥2 pins | PASS |
+| 29 | Ingest-health strip on production: "INGEST last job: completed" from `/api/ingest/health` (Agy endpoint live); local/404 deployments get the honest "not available … needs Agy deploy" empty state (verified locally pre-deploy) | PASS |
+| 30 | Restated-cost honesty: Aider rows locally (no normalized price) show "not restated" dimmed — never substituted for reported | PASS |
+| 31 | Same-bench deep links: dossier derives its benchmark from the run itself; foreign pins on `/compare` still land in the "Not on …" note | PASS |
+| 32 | Defect fixed this phase: `/runs/$id` loader read `search` (not a loader arg) → 500 on production pre-fix; now `loaderDeps` | FIXED |
+| 33 | `pnpm test --run` | PASS (53 tests incl. 6 health-parser tests) |

@@ -352,3 +352,26 @@ benchmark version, so cross-bench mixing is structurally impossible.
 | 31 | Same-bench deep links: dossier derives its benchmark from the run itself; foreign pins on `/compare` still land in the "Not on …" note | PASS |
 | 32 | Defect fixed this phase: `/runs/$id` loader read `search` (not a loader arg) → 500 on production pre-fix; now `loaderDeps` | FIXED |
 | 33 | `pnpm test --run` | PASS (53 tests incl. 6 health-parser tests) |
+
+### Phase 5–6 close-out QA (production `a6553260`+, 2026-09-06)
+
+Shipped: Today-honesty UI fixes, Finder third intent (`cheapest-at-floor` + `minSolve`),
+costBasis round-trip on `/compare` + `/finder`, README/CONTRIBUTING/OG surfaces,
+Compare in nav, health-strip cost-coverage counts. DeepSWE went live mid-QA
+(Agy ingest) and was QA'd as a first-class slice.
+
+| # | Check (production unless noted) | Result |
+|---|---|---|
+| 34 | Today honesty, explorer: `?costBasis=today` on DeepSWE → 45/70 plotted (restated only), knee recomputed (GPT-5.6 Luna vs deepseek-v4-pro on Reported — the basis demonstrably moves the math), table header "$/TASK (TODAY)", unrestated rows show "—" | PASS |
+| 35 | Today honesty, TB seed: 0 restated rows → all 10 cost coords null → scatter suppressed with coverage empty state; no reported fallback | PASS |
+| 36 | Tooltip defect fixed: missing price renders "— (not restated)", never `$0` (`shown ?? 0` removed) | FIXED |
+| 37 | `costBasis` round-trips on `/compare` (matrix note "today basis — runs without restated pricing show —", basis-aware $/resolved) and `/finder` (server filters on normalized-only; rail note basis-aware); Explorer "Compare pins" carries the basis | PASS |
+| 38 | Methodology: "Today falls back to Reported" sentence removed; replaced with the omission rule | PASS |
+| 39 | Finder `cheapest-at-floor` + `minSolve=50`, cap $2 on DeepSWE: best fit deepseek-v4-flash (53.3%, $0.10/task), ledger excludes below-floor and over-budget runs with reasons; real `sourceRunId` + dossier links; URL carries `objective=cheapest-at-floor&minSolve=50` | PASS |
+| 40 | Launch surfaces: README.md, CONTRIBUTING.md (SourceAdapter contract), `og:title/og:image/twitter:card` live on every route, `/og.svg` 200, nav = Explorer · Finder · Compare · Methodology | PASS |
+| 41 | Health strip: production shows "last job: completed · cost coverage: 170 reported / 77 restated / 351 runs" (counts parsed from Agy's payload; endpoint had no literal unmatched field) | PASS |
+| 42 | DeepSWE slice: first-class `?benchmark=01J8BV000000000000DEEPSWE11`, 70→78 runs (ingest actively landing during QA), official banner, 7-frontier knee deepseek-v4-pro, dossiers + finder work on it; isolated from TB/Aider/SWE by per-version query | PASS (live) |
+| 43 | DeepSWE selector visibility: initially missing due to the 24h KV `catalog:benchmark_options` cache (fell back to TB on a direct URL); self-healed when the catalog refreshed — KV catalog TTL vs fresh benches is Agy-lane, noted | NOTE |
+| 44 | Keyboard: filter rail (selects/checkboxes/radios/inputs/buttons) and table model links are natively tabbable and Enter-activatable; every datum is reachable without a pointer (chart hover is the only pointer-only affordance, and the table carries the same data) | PASS |
+| 45 | Compare same-bench re-check on new deploy; dossier 200/404 re-check | PASS |
+| 46 | `pnpm test --run` | PASS (67 tests incl. floor-intent + health-count additions) |

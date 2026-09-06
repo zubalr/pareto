@@ -36,6 +36,7 @@ export async function warmExplorerCache(kv?: any): Promise<string[]> {
     await fetchExplorerData({
       benchmarkVersionId: bvId,
       costBasis: "reported",
+      forceRefresh: true,
     });
     warmedKeys.push(key);
   }

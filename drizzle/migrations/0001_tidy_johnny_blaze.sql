@@ -1,0 +1,1 @@
+ALTER TABLE `ingest_jobs` ADD `error` text;

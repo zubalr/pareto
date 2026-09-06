@@ -452,3 +452,219 @@ export const getCompareData = createServerFn()
       };
     }
   });
+
+// ---------------------------------------------------------------------------
+// Run dossier — one configuration run, fully attributed.
+// Read-only D1. The response is benchmark-scoped by construction (the run id
+// pins the benchmark version), so deep links are same-benchmark inherently.
+// Reported cost is the primary number; restated (normalized) cost is surfaced
+// only when non-null and never substituted for reported.
+// ---------------------------------------------------------------------------
+
+export interface RunDossierResponse {
+  run: ExplorerRun | null;
+  benchmark: BenchmarkOption | null;
+  benchRunCount: number;
+  error: string | null;
+}
+
+export const getRunDossier = createServerFn()
+  .validator((input: { id: string }) => input)
+  .handler(async ({ data }): Promise<RunDossierResponse> => {
+    try {
+      const db = getDb();
+
+      const rows = await db
+        .select({
+          run: benchmarkRuns,
+          model: models,
+          provider: providers,
+          harness: harnesses,
+          harnessVer: harnessVersions,
+          effort: effortPresets,
+          source: sources,
+        })
+        .from(benchmarkRuns)
+        .innerJoin(models, eq(benchmarkRuns.modelId, models.id))
+        .innerJoin(providers, eq(models.providerId, providers.id))
+        .innerJoin(harnessVersions, eq(benchmarkRuns.harnessVersionId, harnessVersions.id))
+        .innerJoin(harnesses, eq(harnessVersions.harnessId, harnesses.id))
+        .innerJoin(effortPresets, eq(benchmarkRuns.effortPresetId, effortPresets.id))
+        .innerJoin(sources, eq(benchmarkRuns.sourceId, sources.id))
+        .where(eq(benchmarkRuns.id, data.id))
+        .limit(1);
+
+      if (rows.length === 0) {
+        return { run: null, benchmark: null, benchRunCount: 0, error: null };
+      }
+
+      const r = rows[0];
+      const benchVersionId = r.run.benchmarkVersionId;
+
+      const benchRows = await db
+        .select({
+          benchmarkVersionId: benchmarkVersions.id,
+          benchmarkSlug: benchmarks.slug,
+          benchmarkName: benchmarks.name,
+          version: benchmarkVersions.version,
+          nTasks: benchmarkVersions.nTasks,
+        })
+        .from(benchmarkVersions)
+        .innerJoin(benchmarks, eq(benchmarkVersions.benchmarkId, benchmarks.id));
+
+      const benchOptions: BenchmarkOption[] = benchRows.map((b) => ({
+        id: b.benchmarkVersionId,
+        benchmarkSlug: b.benchmarkSlug,
+        benchmarkName: b.benchmarkName,
+        version: b.version,
+        nTasks: b.nTasks,
+        displayLabel: `${b.benchmarkName} ${b.version} (${b.nTasks} tasks)`,
+      }));
+
+      const benchRuns = await db
+        .select({ n: benchmarkRuns.id })
+        .from(benchmarkRuns)
+        .where(eq(benchmarkRuns.benchmarkVersionId, benchVersionId));
+
+      const run: ExplorerRun = {
+        id: r.run.id,
+        sourceRunId: r.run.sourceRunId,
+        modelId: r.model.id,
+        modelSlug: r.model.slug,
+        modelDisplayName: r.model.displayName,
+        providerName: r.provider.name,
+        harnessId: r.harness.id,
+        harnessName: r.harness.name,
+        harnessVersionId: r.harnessVer.id,
+        harnessVersion: r.harnessVer.version,
+        effortPresetId: r.effort.id,
+        effortPresetSlug: r.effort.slug,
+        sourceId: r.source.id,
+        sourceName: r.source.name,
+        sourceOfficial: Boolean(r.source.official),
+        nSolved: r.run.nSolved,
+        nTotal: r.run.nTotal,
+        solveRate: r.run.solveRate,
+        costUsdReported: r.run.costUsdReported,
+        costUsdNormalized: r.run.costUsdNormalized,
+        costPerTaskReported: r.run.costPerTaskReported,
+        costPerTaskNormalized: r.run.costPerTaskNormalized,
+        cost: r.run.costPerTaskReported,
+        hasTokens: Boolean(r.run.hasTokens),
+        hasCost: Boolean(r.run.hasCost),
+        hasLatency: Boolean(r.run.hasLatency),
+        hasPassAtK: Boolean(r.run.hasPassAtK),
+        hasCi: Boolean(r.run.hasCi),
+        passAtK: r.run.passAtK,
+        latencyP50Seconds: r.run.latencyP50Seconds,
+        tokensIn: r.run.tokensIn,
+        tokensOut: r.run.tokensOut,
+      };
+
+      return {
+        run,
+        benchmark: benchOptions.find((b) => b.id === benchVersionId) ?? null,
+        benchRunCount: benchRuns.length,
+        error: null,
+      };
+    } catch (err: any) {
+      return { run: null, benchmark: null, benchRunCount: 0, error: err?.message || "Failed to load run from D1." };
+    }
+  });
+
+export interface IngestHealthResponse {
+  status: "ok" | "degraded" | "error";
+  lastJob: {
+    id: string | null;
+    status: string;
+    startedAt: string | null;
+    completedAt: string | null;
+    error: string | null;
+  };
+  runCounts: Record<string, number>;
+  restatedCostCount: number;
+  reportedCostCount: number;
+  totalRuns: number;
+  error?: string | null;
+}
+
+export const getIngestHealth = createServerFn().handler(
+  async (): Promise<IngestHealthResponse> => {
+    try {
+      const db = getDb();
+      const lastJobRes = await (db as any).session.client
+        .prepare(
+          `SELECT id, status, started_at, completed_at, error, summary
+           FROM ingest_jobs
+           ORDER BY started_at DESC
+           LIMIT 1`
+        )
+        .first();
+
+      let jobError = lastJobRes?.error || null;
+      if (!jobError && lastJobRes?.summary) {
+        try {
+          const parsed = JSON.parse(lastJobRes.summary);
+          if (parsed.error) jobError = parsed.error;
+        } catch {}
+      }
+
+      const countsRes = await (db as any).session.client
+        .prepare(
+          `SELECT b.slug as benchmark_slug, count(r.id) as count
+           FROM benchmark_runs r
+           JOIN benchmark_versions bv ON r.benchmark_version_id = bv.id
+           JOIN benchmarks b ON bv.benchmark_id = b.id
+           GROUP BY b.slug`
+        )
+        .all();
+
+      const runCounts: Record<string, number> = {};
+      for (const row of (countsRes.results || []) as Array<{ benchmark_slug: string; count: number }>) {
+        runCounts[row.benchmark_slug] = row.count;
+      }
+
+      const costCountsRes = await (db as any).session.client
+        .prepare(
+          `SELECT
+             sum(case when cost_usd_normalized is not null then 1 else 0 end) as normalized_count,
+             sum(case when cost_usd_reported is not null then 1 else 0 end) as reported_count,
+             count(*) as total_count
+           FROM benchmark_runs`
+        )
+        .first();
+
+      return {
+        status: lastJobRes?.status === "failed" ? "degraded" : "ok",
+        lastJob: {
+          id: lastJobRes?.id || null,
+          status: lastJobRes?.status || "unknown",
+          startedAt: lastJobRes?.started_at || null,
+          completedAt: lastJobRes?.completed_at || null,
+          error: jobError,
+        },
+        runCounts,
+        restatedCostCount: costCountsRes?.normalized_count ?? 0,
+        reportedCostCount: costCountsRes?.reported_count ?? 0,
+        totalRuns: costCountsRes?.total_count ?? 0,
+        error: null,
+      };
+    } catch (err: any) {
+      return {
+        status: "error",
+        lastJob: {
+          id: null,
+          status: "unknown",
+          startedAt: null,
+          completedAt: null,
+          error: err?.message || String(err),
+        },
+        runCounts: {},
+        restatedCostCount: 0,
+        reportedCostCount: 0,
+        totalRuns: 0,
+        error: err?.message || String(err),
+      };
+    }
+  }
+);

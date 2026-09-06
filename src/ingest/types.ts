@@ -122,6 +122,7 @@ export interface IngestPipelineResult {
   openRouterSnapshotsCount: number;
   harborRunsCount: number;
   swebenchRunsCount: number;
+  restatedRunsCount?: number;
   warmedCacheKeys: string[];
   error?: string;
 }

@@ -4,10 +4,12 @@ Design record for the Explorer board: layout, chart encodings, color/opacity rul
 empty & coverage states, and the specification for future charts. Written so the next
 session (human or agent) can reconstruct every visual decision without re-deriving it.
 
-**Status: needs deploy.** Phase 1.5 UI changes are committed as a local patch.
-Deployment is blocked upstream on Cloudflare account auth (see `BLOCKED.md` from the
-Phase 1 cost pass) — do not ship from a preview account. When the human completes
-`wrangler login` on the paid account, `pnpm deploy` publishes this patch unchanged.
+**Status: needs deploy (Phases 2–3 UI).** Phase 2 data-plane ingest is committed and
+live; the Phase 2 product surfaces (`/finder`, `/models/*`, chart slots) and the Phase 3
+surfaces (`/compare`, Resources slot, multi-pin) are a local patch — production
+`pareto.jubairjashim1975.workers.dev` still serves a shell for `/finder` (verified
+2026-09-06). Deploy belongs to the ingest/account lane; `pnpm deploy` publishes this
+patch unchanged once that lane is clear.
 
 ---
 
@@ -168,14 +170,22 @@ palette, dominated/secondary series quiet per §3.
 - **Example**: GLM-5.3 · Claude Code: low (22.1%, $12/task) → high (31.5%, $24/task) →
   max (41.8%, $40.91/task).
 
-### 6.3 Resource multipliers vs baseline
-- **Trigger**: ≥2 configurations sharing model+harness+benchmark differing only in
-  resource knobs (effort, trials, time budget), plus a chosen baseline configuration.
-- **Encoding**: X = resource multiplier vs baseline (tokens or cost ratio, log),
-  Y = solve-rate *delta* in points vs baseline (can be negative). Baseline at (1, 0)
-  marked; points right-and-up = resource well spent; right-and-down = wasted spend.
-- **Example**: baseline GLM-5.3 · max = (1.0×, +0); GLM-5.3 · max ×2-trial voting =
-  (2.1×, +3.2 pts) — worth it only if the viewer prices 3.2 points above 1.1× cost.
+### 6.3 Resource multipliers vs baseline — REVISED & SHIPPED (Phase 3)
+- **Shipped encoding** (supersedes the solve-delta sketch below, which needed
+  paired-effort data the real sources rarely provide): grouped bars — x = metric
+  group (USD/task, Tokens, Wall-clock p50), bars = configurations, value =
+  **multiplier vs the baseline** (baseline = 1.0×, dashed reference line).
+- **Baseline** = cheapest configuration with positive reported cost in the slice.
+- **Coverage gating**: a configuration without a metric's telemetry gets no bar in
+  that group; if the *baseline* lacks the metric, the whole group is suppressed with
+  an explicit note ("Baseline lacks token telemetry — tokens group suppressed") — a
+  multiplier against an unmeasured baseline would be fabricated. Fewer than two
+  costed configurations ⇒ honest empty state.
+- **Cap**: frontier-first then best-solve, 8 configs, with "N not drawn" note (Aider
+  slices have 51+ costed rows).
+- **Read**: which configuration pays how many times the cheapest one for cost,
+  tokens, or wall-clock. Original solve-delta sketch retained for reference: points
+  at (resource multiplier, solve-delta vs baseline) once paired-effort data exists.
 
 ## 8. Finder (`/finder`) — Phase 2
 
@@ -246,6 +256,27 @@ context, plus the bench frontier polyline for background.
   series on live Aider data (e.g. gpt-5 · Aider at low/medium/high).
 - **Pareto** remains the default slot; `?chart=` is omitted for it.
 
+## 9b. Compare matrix (`/compare`) — Phase 3
+
+Side-by-side matrix for 2–8 configurations, pinned to **one benchmark version**
+(`?benchmark=`, default TB 4.0). Selection via `?ids=` (run ids, exact) and/or
+`?slugs=` (model slugs → every run of that model on the slice, solve desc), combined,
+deduped, capped at 8 (`selectCompareRuns` in `src/compare.ts`, unit-tested). The
+same-benchmark guarantee is structural: the read-only `getCompareData` server function
+queries one benchmark version, so pins from another board cannot resolve — they are
+reported in a "Not on …" note instead of silently mixing. Fewer than two resolved rows
+renders instructions; >8 renders a truncation note.
+
+- Matrix columns: status badge (bench-wide KNEE/FRONTIER/DOMINATED — matches the
+  Explorer), configuration (model → `/models/$slug`, harness+version, effort), solve
+  rate with n/n, $/task, $/resolved, pass@k inline, tokens (in+out), p50, coverage
+  chips, source with `sourceRunId` tooltip. Missing telemetry renders "—" with a
+  tooltip, never 0. Best value per numeric column is bolded in emerald.
+- Entry points ("pins"): Explorer multi-pin — the `pinned` search param is now a
+  comma-separated set (click rows/points to toggle, capped at 8, `Pinned (N)` chip in
+  the chart header) — with a "Compare pins (N)" link beside the slot tabs; Finder's
+  "Compare best + alternatives →"; model page's "Compare these N runs →".
+
 ## 10. Browser QA log (Phase 2)
 
 Environment: `npx wrangler dev --port 8787` (local D1: TB 4.0 + SWE-bench Verified
@@ -269,6 +300,20 @@ brief this QA ran locally; the patch needs deploy.
 | 11 | Explorer Pareto slot unchanged on TB (knee GLM-5.3, frontier polyline, quiet dominated) | PASS |
 | 12 | `pnpm test --run` | PASS (24+ tests incl. 9 finder tests) |
 | 13 | Known limitation (not a defect): chart-point tooltip cannot be exercised via synthetic pointer events in the harness; formatter verified by code review, wiring unchanged from Phase 1 | NOTE |
+
+### Phase 3 QA (same environment; production still lacks Phase 2 routes)
+
+| # | Check | Result |
+|---|---|---|
+| 14 | Explorer multi-pin: two row clicks → `pinned=<id>,<id>` in URL, `Pinned (2)` chip, amber rings on both points and rows | PASS |
+| 15 | "Compare pins (2)" → `/compare?ids=…&benchmark=…` matrix with KNEE/FRONTIER/DOMINATED badges, best-per-column bold, "—" for missing pass@k/tokens | PASS |
+| 16 | Compare reload round-trip (URL re-fetch restores the same matrix) | PASS |
+| 17 | Unknown/foreign pin (`?ids=bogus-id,tb4`) → "Not on Terminal-Bench 4.0: ids: bogus-id" + "pin at least two" instructions, no silent drop | PASS |
+| 18 | Resources slot on TB seed → both groups render (USD/task + Wall-clock), baseline GPT-5.6 Luna 1.0× dashed line, "tokens group suppressed" note (seed has no token counts) | PASS |
+| 19 | Resources slot on Aider (69 rows) → USD-only group, both suppression notes, "43 not drawn (cap 8)", baseline gpt-4o-mini ($0.0014/task) | PASS |
+| 20 | Finder "Compare best + alternatives →" → 3-row matrix; model page "Compare these 3 runs →" (Aider gpt-5) → 3-row matrix on Aider | PASS |
+| 21 | `pnpm test --run` | PASS (38 tests incl. 13 new compare/resources tests) |
+| 22 | Dev-server asset gotcha (not an app defect): `wrangler dev` must be restarted after `pnpm build` — its static-asset manifest is startup-time; stale manifests 404 new hashed assets | NOTE |
 
 ## 7. Typography & chrome
 

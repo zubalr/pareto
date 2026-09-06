@@ -112,9 +112,19 @@ function ConfigCard({
           p50 <span className="text-zinc-100 font-mono">{run.latencyP50Seconds != null ? `${run.latencyP50Seconds.toFixed(1)}s` : "—"}</span>
         </span>
       </div>
-      <div className="text-[9px] text-zinc-500">
-        source: {run.sourceName}
-        {run.sourceOfficial ? " (official)" : " (compiled)"} · n={run.nSolved} resolved
+      <div className="text-[9px] text-zinc-500 flex items-center justify-between">
+        <span>
+          source: {run.sourceName}
+          {run.sourceOfficial ? " (official)" : " (compiled)"} · n={run.nSolved} resolved
+        </span>
+        <Link
+          to="/runs/$id"
+          params={{ id: run.id }}
+          className="text-cyan-400 hover:text-cyan-300 underline shrink-0 ml-2"
+          title="Open run dossier"
+        >
+          dossier
+        </Link>
       </div>
     </div>
   );

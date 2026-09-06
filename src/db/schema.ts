@@ -134,6 +134,7 @@ export const ingestJobs = sqliteTable("ingest_jobs", {
   status: text("status").notNull(),
   startedAt: text("started_at").notNull(),
   completedAt: text("completed_at"),
+  error: text("error"),
   summary: text("summary"),
 });
 

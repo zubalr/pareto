@@ -2,6 +2,7 @@ import { ingestAiderPolyglot, AIDER_SOURCE_ID } from "./aider";
 import { ingestOpenRouterPricing } from "./openrouter";
 import { ingestHarbor } from "./harbor";
 import { ingestSWEBench } from "./swebench";
+import { recomputeNormalizedCosts } from "./restate";
 import { warmExplorerCache } from "./warm";
 import type { IngestPipelineResult } from "./types";
 import { env as workersEnv } from "cloudflare:workers";
@@ -21,6 +22,8 @@ export interface RunPipelineOptions {
   ctx?: any;
   d1?: any;
   kv?: any;
+  adapters?: Array<"aider" | "openrouter" | "harbor" | "swebench" | "restate">;
+  retry?: boolean;
 }
 
 export async function runIngestPipeline(options?: RunPipelineOptions): Promise<IngestPipelineResult> {
@@ -40,8 +43,8 @@ export async function runIngestPipeline(options?: RunPipelineOptions): Promise<I
   try {
     await d1
       .prepare(
-        `INSERT INTO ingest_jobs (id, source_id, status, started_at, completed_at, summary)
-         VALUES (?, ?, ?, ?, NULL, ?)`
+        `INSERT INTO ingest_jobs (id, source_id, status, started_at, completed_at, error, summary)
+         VALUES (?, ?, ?, ?, NULL, NULL, ?)`
       )
       .bind(jobId, AIDER_SOURCE_ID, "running", startedAt, JSON.stringify({ phase: "started" }))
       .run();
@@ -49,69 +52,127 @@ export async function runIngestPipeline(options?: RunPipelineOptions): Promise<I
     console.warn("[Ingest] Failed to record initial ingest_jobs row:", err);
   }
 
-  try {
-    // 2. Ingest Aider polyglot runs
-    console.log("[Ingest] 1/5 Ingesting Aider polyglot leaderboard...");
-    let aiderResult: any;
+  // Determine adapters to run
+  let targetAdapters: string[] = options?.adapters ?? ["aider", "openrouter", "harbor", "swebench", "restate"];
+  if (options?.retry && !options?.adapters) {
     try {
-      aiderResult = await ingestAiderPolyglot({ d1 });
-      console.log(`[Ingest] Successfully ingested/upserted ${aiderResult.runsIngested} Aider runs.`);
-    } catch (err: any) {
-      throw new Error(`[Aider Ingest Failed] ${err?.message || err}`);
+      const lastFailed = (await d1
+        .prepare("SELECT error FROM ingest_jobs WHERE status = 'failed' ORDER BY started_at DESC LIMIT 1")
+        .first()) as { error?: string } | null;
+
+      if (lastFailed?.error) {
+        const errText = lastFailed.error.toLowerCase();
+        const detected: string[] = [];
+        if (errText.includes("aider")) detected.push("aider");
+        if (errText.includes("openrouter")) detected.push("openrouter");
+        if (errText.includes("harbor")) detected.push("harbor");
+        if (errText.includes("swe-bench") || errText.includes("swebench")) detected.push("swebench");
+
+        if (detected.length > 0) {
+          detected.push("restate");
+          targetAdapters = Array.from(new Set(detected));
+          console.log(`[Ingest] Retry mode detected target adapters from previous failure: ${targetAdapters.join(", ")}`);
+        }
+      }
+    } catch (e) {
+      console.warn("[Ingest] Failed to inspect previous failure for retry, running full pipeline:", e);
+    }
+  }
+
+  try {
+    let aiderRunsCount = 0;
+    let openRouterSnapshotsCount = 0;
+    let harborRunsCount = 0;
+    let swebenchRunsCount = 0;
+    let matchedModels: string[] = [];
+
+    // 2. Ingest Aider polyglot runs
+    if (targetAdapters.includes("aider")) {
+      console.log("[Ingest] Ingesting Aider polyglot leaderboard...");
+      try {
+        const aiderResult = await ingestAiderPolyglot({ d1 });
+        aiderRunsCount = aiderResult.runsIngested;
+        console.log(`[Ingest] Successfully ingested/upserted ${aiderRunsCount} Aider runs.`);
+      } catch (err: any) {
+        throw new Error(`[Aider Ingest Failed] ${err?.message || err}`);
+      }
     }
 
     // 3. Ingest OpenRouter pricing snapshots
-    console.log("[Ingest] 2/5 Ingesting OpenRouter model pricing snapshots...");
-    let orResult: any;
-    try {
-      orResult = await ingestOpenRouterPricing({ d1 });
-      console.log(
-        `[Ingest] Successfully snapshotted ${orResult.snapshotsIngested} models (${orResult.matchedModels.join(", ")}).`
-      );
-    } catch (err: any) {
-      throw new Error(`[OpenRouter Ingest Failed] ${err?.message || err}`);
+    if (targetAdapters.includes("openrouter")) {
+      console.log("[Ingest] Ingesting OpenRouter model pricing snapshots...");
+      try {
+        const orResult = await ingestOpenRouterPricing({ d1 });
+        openRouterSnapshotsCount = orResult.snapshotsIngested;
+        matchedModels = orResult.matchedModels;
+        console.log(
+          `[Ingest] Successfully snapshotted ${openRouterSnapshotsCount} models (${matchedModels.join(", ")}).`
+        );
+      } catch (err: any) {
+        throw new Error(`[OpenRouter Ingest Failed] ${err?.message || err}`);
+      }
     }
 
     // 4. Ingest Harbor / Terminal-Bench runs
-    console.log("[Ingest] 3/5 Ingesting Harbor / Terminal-Bench leaderboard...");
-    let harborResult: any;
-    try {
-      harborResult = await ingestHarbor({ d1 });
-      console.log(`[Ingest] Successfully ingested/upserted ${harborResult.ingestedCount} Harbor runs.`);
-    } catch (err: any) {
-      throw new Error(`[Harbor Ingest Failed] ${err?.message || err}`);
+    if (targetAdapters.includes("harbor")) {
+      console.log("[Ingest] Ingesting Harbor / Terminal-Bench leaderboard...");
+      try {
+        const harborResult = await ingestHarbor({ d1 });
+        harborRunsCount = harborResult.ingestedCount;
+        console.log(`[Ingest] Successfully ingested/upserted ${harborRunsCount} Harbor runs.`);
+      } catch (err: any) {
+        throw new Error(`[Harbor Ingest Failed] ${err?.message || err}`);
+      }
     }
 
     // 5. Ingest SWE-bench Verified runs
-    console.log("[Ingest] 4/5 Ingesting SWE-bench Verified leaderboard...");
-    let sweResult: any;
-    try {
-      sweResult = await ingestSWEBench({ d1 });
-      console.log(`[Ingest] Successfully ingested/upserted ${sweResult.ingestedCount} SWE-bench runs.`);
-    } catch (err: any) {
-      throw new Error(`[SWE-bench Ingest Failed] ${err?.message || err}`);
+    if (targetAdapters.includes("swebench")) {
+      console.log("[Ingest] Ingesting SWE-bench Verified leaderboard...");
+      try {
+        const sweResult = await ingestSWEBench({ d1 });
+        swebenchRunsCount = sweResult.ingestedCount;
+        console.log(`[Ingest] Successfully ingested/upserted ${swebenchRunsCount} SWE-bench runs.`);
+      } catch (err: any) {
+        throw new Error(`[SWE-bench Ingest Failed] ${err?.message || err}`);
+      }
     }
 
-    // 6. Invalidate & warm KV caches
-    console.log("[Ingest] 5/5 Warming default Explorer KV cache slices...");
+    // 6. Recompute normalized costs from OpenRouter snapshots
+    let restatedRunsCount = 0;
+    if (targetAdapters.includes("restate") || targetAdapters.includes("openrouter")) {
+      console.log("[Ingest] Recomputing normalized costs on Today basis...");
+      try {
+        const restateResult = await recomputeNormalizedCosts({ d1 });
+        restatedRunsCount = restateResult.runsRestated;
+        console.log(
+          `[Ingest] Successfully restated normalized costs for ${restateResult.runsRestated} runs (${restateResult.runsResetToNull} reset to NULL, ${restateResult.unchangedCount} unchanged).`
+        );
+      } catch (err: any) {
+        throw new Error(`[Cost Restatement Failed] ${err?.message || err}`);
+      }
+    }
+
+    // 7. Invalidate & warm KV caches
+    console.log("[Ingest] Warming default Explorer KV cache slices...");
     const warmedKeys = await warmExplorerCache(kv);
     console.log(`[Ingest] Successfully warmed KV keys: ${warmedKeys.join(", ")}`);
 
     const completedAt = new Date().toISOString();
     const summary = {
-      aiderRunsIngested: aiderResult.runsIngested,
-      openRouterSnapshotsIngested: orResult.snapshotsIngested,
-      harborRunsIngested: harborResult.ingestedCount,
-      swebenchRunsIngested: sweResult.ingestedCount,
-      matchedModels: orResult.matchedModels,
+      aiderRunsIngested: aiderRunsCount,
+      openRouterSnapshotsIngested: openRouterSnapshotsCount,
+      harborRunsIngested: harborRunsCount,
+      swebenchRunsIngested: swebenchRunsCount,
+      restatedRunsCount,
+      matchedModels,
       warmedCacheKeys: warmedKeys,
     };
 
-    // 7. Mark job as completed
+    // 8. Mark job as completed
     await d1
       .prepare(
         `UPDATE ingest_jobs
-         SET status = 'completed', completed_at = ?, summary = ?
+         SET status = 'completed', completed_at = ?, error = NULL, summary = ?
          WHERE id = ?`
       )
       .bind(completedAt, JSON.stringify(summary), jobId)
@@ -124,24 +185,26 @@ export async function runIngestPipeline(options?: RunPipelineOptions): Promise<I
       status: "completed",
       startedAt,
       completedAt,
-      aiderRunsCount: aiderResult.runsIngested,
-      openRouterSnapshotsCount: orResult.snapshotsIngested,
-      harborRunsCount: harborResult.ingestedCount,
-      swebenchRunsCount: sweResult.ingestedCount,
+      aiderRunsCount,
+      openRouterSnapshotsCount,
+      harborRunsCount,
+      swebenchRunsCount,
+      restatedRunsCount,
       warmedCacheKeys: warmedKeys,
     };
   } catch (err: any) {
     const failedAt = new Date().toISOString();
+    const errorMessage = err?.message || String(err);
     console.error(`[Ingest] Job ${jobId} failed:`, err);
 
     try {
       await d1
         .prepare(
           `UPDATE ingest_jobs
-           SET status = 'failed', completed_at = ?, summary = ?
+           SET status = 'failed', completed_at = ?, error = ?, summary = ?
            WHERE id = ?`
         )
-        .bind(failedAt, JSON.stringify({ error: err?.message || String(err) }), jobId)
+        .bind(failedAt, errorMessage, JSON.stringify({ error: errorMessage }), jobId)
         .run();
     } catch (dbErr) {
       console.error("[Ingest] Failed to update ingest_jobs status on failure:", dbErr);

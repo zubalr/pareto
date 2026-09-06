@@ -10,6 +10,7 @@ interface ParetoChartProps {
   hoveredId: string | null;
   onSelectPin: (id: string | null) => void;
   onHoverPoint: (id: string | null) => void;
+  onOpenDossier?: (id: string) => void;
   costBasis: "reported" | "today";
 }
 
@@ -44,6 +45,7 @@ export function ParetoChart({
   hoveredId,
   onSelectPin,
   onHoverPoint,
+  onOpenDossier,
   costBasis,
 }: ParetoChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
@@ -80,7 +82,13 @@ export function ParetoChart({
 
         chart.on("click", (params: any) => {
           if (params.data && params.data.runId) {
-            // membership toggle lives in the parent (multi-pin set)
+            // shift+click opens the run dossier; plain click toggles the
+            // multi-pin set (membership logic lives in the parent)
+            const native = params.event?.event as MouseEvent | undefined;
+            if (native?.shiftKey) {
+              onOpenDossier?.(params.data.runId);
+              return;
+            }
             onSelectPin(params.data.runId);
           }
         });
@@ -295,7 +303,7 @@ export function ParetoChart({
                 <div style="display:flex; gap: 6px; font-size: 9px; margin-bottom: 3px;">
                   ${flag(r.hasTokens, "TOK")}${flag(r.hasCost, "USD")}${flag(r.hasLatency, "LAT")}${flag(r.hasPassAtK, "P@K")}${flag(r.hasCi, "CI")}
                 </div>
-                <div style="font-size: 9px; color:#52525b;">source: ${r.sourceName}${r.sourceOfficial ? " (official)" : " (compiled)"} · click to pin</div>
+                <div style="font-size: 9px; color:#52525b;">source: ${r.sourceName}${r.sourceOfficial ? " (official)" : " (compiled)"} · click: pin · shift+click: dossier</div>
               </div>
             `;
           },

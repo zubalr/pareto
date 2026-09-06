@@ -108,3 +108,37 @@ describe("SWE-bench Ingest Transforms", () => {
   });
 });
 
+describe("Ingest Health Payload Parsing", () => {
+  it("correctly parses the /api/ingest/health payload", async () => {
+    const { parseHealthPayload } = await import("../src/ingestHealth");
+    const samplePayload = {
+      status: "ok",
+      last_job: "completed",
+      last_job_status: "completed",
+      lastJob: {
+        id: "01J8JOB2970D95820260906T10",
+        status: "completed",
+        startedAt: "2026-09-06T13:49:39.991Z",
+        completedAt: "2026-09-06T13:49:50.805Z",
+        error: null,
+      },
+      runCounts: {
+        "aider-polyglot": 69,
+        "swe-bench-verified": 184,
+        "terminal-bench": 10,
+        "terminal-bench-2": 18,
+      },
+      restatedCostCount: 20,
+      reportedCostCount: 100,
+      totalRuns: 281,
+    };
+
+    const parsed = parseHealthPayload(samplePayload);
+    expect(parsed).not.toBeNull();
+    expect(parsed?.state).toBe("ok");
+    expect(parsed?.statusLabel).toBe("last job: completed");
+    expect(parsed?.errored).toBe(false);
+  });
+});
+
+

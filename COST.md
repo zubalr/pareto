@@ -28,12 +28,12 @@ No second bill or paid add-on is permitted. To ensure zero overage, an operation
 
 ---
 
-## 2. Monthly Usage Models: 1k, 10k, and 100k Page Views (Including Daily Ingest Cron)
+## 2. Monthly Usage Models: 1k, 10k, and 100k Page Views (Including Daily Ingest Cron & Cost Restatements)
 
-Assuming a conservative **90% KV cache hit rate** on user requests plus 1 automated daily ingest cron (`30` executions/mo, writing ~290 D1 rows/day across Aider, OpenRouter, Harbor, and SWE-bench):
+Assuming a conservative **90% KV cache hit rate** on user requests plus 1 automated daily ingest cron (`30` executions/mo, writing ~290 D1 adapter rows + ~20 normalized cost restatements per day across Aider, OpenRouter, Harbor, and SWE-bench):
 - **Cache Hit**: 1 Worker Request, 1 KV Read, ~3–5 ms CPU, 0 D1 Rows Read, 0 D1 Rows Written.
 - **Cache Miss**: 1 Worker Request, 2 KV Reads, 1 KV Write, ~12–15 ms CPU, ~14 D1 Rows Read (indexed), 0 D1 Rows Written.
-- **Daily Ingest Cron**: 1 Cron Invocation/day, ~80–120 ms CPU, ~290 D1 Rows Written (batch), ~5 KV Writes (cache warming), 0 Inference Spend.
+- **Daily Ingest Cron**: 1 Cron Invocation/day, ~90–140 ms CPU, ~310 D1 Rows Written (batch), ~5 KV Writes (cache warming), 0 Inference Spend.
 
 | Cloudflare Meter | 1,000 Views + Ingest | 10,000 Views + Ingest | 100,000 Views + Ingest | Included Paid Allotment | Red-Line Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -43,10 +43,22 @@ Assuming a conservative **90% KV cache hit rate** on user requests plus 1 automa
 | **KV Writes** | 250 (0.025%) | 1,150 (0.12%) | 5,150 (0.52%) | 1,000,000 | **Inside Red-Line** (5.2% of 100k limit) |
 | **KV Storage** | ~3.5 MB | ~6.5 MB | ~18 MB | 1,000 MB (1 GB) | **Inside Red-Line** (18% of 100 MB limit) |
 | **D1 Rows Read** | 10,400 (<0.0001%) | 23,000 (<0.0001%) | 79,000 (0.0003%) | 25,000,000,000 | **Inside Red-Line** (0.003% of 2.5B limit) |
-| **D1 Rows Written** | 8,700 (0.017%) | 8,700 (0.017%) | 8,700 (0.017%) | 50,000,000 | **Inside Red-Line** (0.17% of 5M limit) |
+| **D1 Rows Written** | 9,300 (0.019%) | 9,300 (0.019%) | 9,300 (0.019%) | 50,000,000 | **Inside Red-Line** (0.19% of 5M limit) |
 | **Workers Logs** | 1,800 (0.009%) | 15,300 (0.077%) | 150,300 (0.75%) | 20,000,000 | **Inside Red-Line** (7.5% of 2M limit) |
 
 At all modeled tiers (1k, 10k, and 100k views/month), **every meter stays strictly inside the 10% red-line**, guaranteeing zero overage and zero extra charges beyond the base $5/month Workers Paid fee.
+
+### Cost Restatement Formula & Invariant Note
+Normalized costs (`cost_usd_normalized` and `cost_per_task_normalized`) are computed strictly from OpenRouter snapshot rates and reported token counts:
+$$
+\text{cost\_usd\_normalized} = \frac{\text{tokens\_in} \times \text{prompt\_per\_1m} + \text{tokens\_out} \times \text{completion\_per\_1m}}{1{,}000{,}000}
+$$
+$$
+\text{cost\_per\_task\_normalized} = \frac{\text{cost\_usd\_normalized}}{n\_\text{total}}
+$$
+- **Token telemetry required**: If `tokens_in` is missing, the run is never artificially restated from reported USD alone; `cost_usd_normalized` remains `NULL`.
+- **Reported costs preserved**: Maintainer-published costs (`cost_usd_reported`, `cost_per_task_reported`) are immutable and never overwritten.
+- **Minimal D1 churn**: Updates are conditional and idempotent; D1 `UPDATE` statements are only dispatched if computed values differ, adding ~20 writes/day (~600 writes/month).
 
 ---
 

@@ -8,6 +8,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { Pin } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import type { ExplorerRun } from "../server/functions";
 
 interface DataTableProps {
@@ -112,7 +113,16 @@ export function DataTable({
           return (
             <div className="min-w-[190px]">
               <div className="font-semibold text-zinc-100 flex items-center gap-1.5">
-                <span className="truncate">{run.modelDisplayName}</span>
+                <Link
+                  to="/runs/$id"
+                  params={{ id: run.id }}
+                  search={{ pins: pinnedIds.length > 0 ? pinnedIds.join(",") : undefined }}
+                  onClick={(e) => e.stopPropagation()}
+                  title="Open run dossier"
+                  className="truncate hover:text-emerald-400 hover:underline"
+                >
+                  {run.modelDisplayName}
+                </Link>
                 {isPinned && (
                   <Pin size={11} className="text-amber-400 shrink-0" aria-label="Pinned" />
                 )}

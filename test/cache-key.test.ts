@@ -84,4 +84,23 @@ describe("Canonical Explorer Key Generation", () => {
     expect(keyVersion).toBe(keySlug);
     expect(keyId).toBe(keySlug);
   });
+
+  it("handles terminal-bench-2 benchmark IDs and slugs properly", () => {
+    const keySlug = buildCanonicalExplorerKey({
+      benchmarkVersionId: "terminal-bench-2",
+      costBasis: "reported",
+    });
+    const keyVersion = buildCanonicalExplorerKey({
+      benchmarkVersionId: "terminal-bench-2-2.0",
+      costBasis: "reported",
+    });
+    const keyId = buildCanonicalExplorerKey({
+      benchmarkVersionId: "01J8BV000000000000000TB20",
+      costBasis: "reported",
+    });
+
+    expect(keySlug).toBe("explorer:01J8BV000000000000000TB20:cb=reported:m=:h=:e=");
+    expect(keyVersion).toBe(keySlug);
+    expect(keyId).toBe(keySlug);
+  });
 });

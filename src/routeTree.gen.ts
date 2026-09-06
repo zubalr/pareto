@@ -14,6 +14,7 @@ import { Route as CompareRouteImport } from './routes/compare'
 import { Route as FinderRouteImport } from './routes/finder'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as ModelsSlugRouteImport } from './routes/models.$slug'
+import { Route as RunsIdRouteImport } from './routes/runs.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,6 +41,11 @@ const ModelsSlugRoute = ModelsSlugRouteImport.update({
   path: '/models/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RunsIdRoute = RunsIdRouteImport.update({
+  id: '/runs/$id',
+  path: '/runs/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/finder': typeof FinderRoute
   '/methodology': typeof MethodologyRoute
   '/models/$slug': typeof ModelsSlugRoute
+  '/runs/$id': typeof RunsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/finder': typeof FinderRoute
   '/methodology': typeof MethodologyRoute
   '/models/$slug': typeof ModelsSlugRoute
+  '/runs/$id': typeof RunsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,14 +70,33 @@ export interface FileRoutesById {
   '/finder': typeof FinderRoute
   '/methodology': typeof MethodologyRoute
   '/models/$slug': typeof ModelsSlugRoute
+  '/runs/$id': typeof RunsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/compare' | '/finder' | '/methodology' | '/models/$slug'
+  fullPaths:
+    | '/'
+    | '/compare'
+    | '/finder'
+    | '/methodology'
+    | '/models/$slug'
+    | '/runs/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/compare' | '/finder' | '/methodology' | '/models/$slug'
+  to:
+    | '/'
+    | '/compare'
+    | '/finder'
+    | '/methodology'
+    | '/models/$slug'
+    | '/runs/$id'
   id:
-    '__root__' | '/' | '/compare' | '/finder' | '/methodology' | '/models/$slug'
+    | '__root__'
+    | '/'
+    | '/compare'
+    | '/finder'
+    | '/methodology'
+    | '/models/$slug'
+    | '/runs/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -78,6 +105,7 @@ export interface RootRouteChildren {
   FinderRoute: typeof FinderRoute
   MethodologyRoute: typeof MethodologyRoute
   ModelsSlugRoute: typeof ModelsSlugRoute
+  RunsIdRoute: typeof RunsIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -117,6 +145,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModelsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/runs/$id': {
+      id: '/runs/$id'
+      path: '/runs/$id'
+      fullPath: '/runs/$id'
+      preLoaderRoute: typeof RunsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -126,6 +161,7 @@ const rootRouteChildren: RootRouteChildren = {
   FinderRoute: FinderRoute,
   MethodologyRoute: MethodologyRoute,
   ModelsSlugRoute: ModelsSlugRoute,
+  RunsIdRoute: RunsIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

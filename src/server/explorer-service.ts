@@ -84,6 +84,7 @@ export interface ExplorerInput {
   harnesses?: string[];
   efforts?: string[];
   costBasis?: "reported" | "today";
+  forceRefresh?: boolean;
 }
 
 import { buildCanonicalExplorerKey } from "./keys";
@@ -99,7 +100,7 @@ export async function fetchExplorerData(data: ExplorerInput): Promise<ExplorerRe
   const cacheKey = buildCanonicalExplorerKey(data);
 
   // 1. Hot Path: Check KV cache first. On hit, return immediately with 0 D1 reads.
-  if (kv) {
+  if (kv && !data.forceRefresh) {
     try {
       const cached = (await kv.get(cacheKey, "json")) as ExplorerResponse | null;
       if (cached && Array.isArray(cached.allRuns) && Array.isArray(cached.frontier)) {
@@ -255,7 +256,7 @@ export async function fetchExplorerData(data: ExplorerInput): Promise<ExplorerRe
     const mappedRuns: ExplorerRun[] = filteredRows.map((r) => {
       const costPerTask =
         costBasis === "today"
-          ? (r.run.costPerTaskNormalized ?? r.run.costPerTaskReported)
+          ? r.run.costPerTaskNormalized
           : r.run.costPerTaskReported;
 
       return {
@@ -283,7 +284,10 @@ export async function fetchExplorerData(data: ExplorerInput): Promise<ExplorerRe
         costPerTaskNormalized: r.run.costPerTaskNormalized,
         cost: costPerTask, // USD/task for metrics calculation
         hasTokens: Boolean(r.run.hasTokens),
-        hasCost: Boolean(r.run.hasCost),
+        hasCost:
+          costBasis === "today"
+            ? Boolean(r.run.costPerTaskNormalized != null && r.run.costPerTaskNormalized > 0)
+            : Boolean(r.run.hasCost),
         hasLatency: Boolean(r.run.hasLatency),
         hasPassAtK: Boolean(r.run.hasPassAtK),
         hasCi: Boolean(r.run.hasCi),

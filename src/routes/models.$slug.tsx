@@ -358,7 +358,14 @@ function ModelPage() {
                       return (
                         <tr key={r.id} className="bg-zinc-950 hover:bg-zinc-900 transition-colors">
                           <td className="px-3 py-2">
-                            <StatusBadge run={r} />
+                            <Link
+                              to="/runs/$id"
+                              params={{ id: r.id }}
+                              title="Open run dossier"
+                              className="hover:opacity-80"
+                            >
+                              <StatusBadge run={r} />
+                            </Link>
                           </td>
                           <td className="px-3 py-2 text-zinc-200">
                             {r.harnessName}{" "}

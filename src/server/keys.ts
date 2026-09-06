@@ -12,6 +12,8 @@ export function buildCanonicalExplorerKey(input: {
     benchId = "01J8BV000000000000000SWE10";
   } else if (benchId === "aider-polyglot" || benchId === "aider-polyglot-1.0") {
     benchId = "01J8BVAIDER00000000000POLY";
+  } else if (benchId === "terminal-bench-2" || benchId === "terminal-bench-2-2.0") {
+    benchId = "01J8BV000000000000000TB20";
   }
 
   const cost = input.costBasis === "today" ? "today" : "reported";

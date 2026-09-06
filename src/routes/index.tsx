@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useNavigate as useNav, Link } from "@tanstack/react-router";
 import * as React from "react";
 import { z } from "zod";
 import { Zap, Columns3 } from "lucide-react";
@@ -190,6 +190,8 @@ function ExplorerPage() {
     [search.pinned]
   );
   const chartSlot = search.chart ?? "pareto";
+
+  const navigateToDossier = useNav();
 
   // Search param updaters — the URL is the single source of truth for filters.
   const updateSearch = (updater: (prev: ExplorerSearch) => ExplorerSearch) => {
@@ -450,6 +452,13 @@ function ExplorerPage() {
               hoveredId={hoveredId}
               onSelectPin={handleSelectPin}
               onHoverPoint={setHoveredId}
+              onOpenDossier={(id) =>
+                navigateToDossier({
+                  to: "/runs/$id",
+                  params: { id },
+                  search: { pins: pinnedIds.length > 0 ? pinnedIds.join(",") : undefined },
+                })
+              }
               costBasis={costBasis}
             />
           )}

@@ -113,6 +113,46 @@ export interface SWEBenchLeaderboardResponse {
   leaderboards?: SWEBenchLeaderboard[];
 }
 
+export interface DeepSWERow {
+  model: string;
+  harness: string;
+  provider?: string;
+  reasoning_effort?: string;
+  config: string;
+  source?: string;
+  cost_basis?: string;
+  pass_rate?: number;
+  pass_at_1?: number;
+  pass_at_4?: number;
+  n_passed?: number;
+  n_attempted?: number;
+  n_tasks_attempted?: number;
+  n_tasks_passed_any?: number;
+  ci_passed?: number;
+  ci_attempted?: number;
+  ci_lo?: number;
+  ci_hi?: number;
+  ci_half?: number;
+  n_runs?: number;
+  ci_method?: string;
+  mean_cost_usd?: number;
+  median_cost_usd?: number;
+  mean_output_tokens?: number;
+  median_output_tokens?: number;
+  mean_input_tokens?: number;
+  median_input_tokens?: number;
+  mean_duration_seconds?: number;
+  median_duration_seconds?: number;
+}
+
+export interface DeepSWELeaderboardResponse {
+  generated_at?: string;
+  n_tasks_in_set?: number;
+  scope?: string;
+  unit?: string;
+  rows?: DeepSWERow[];
+}
+
 export interface IngestPipelineResult {
   jobId: string;
   status: "completed" | "failed";
@@ -122,6 +162,7 @@ export interface IngestPipelineResult {
   openRouterSnapshotsCount: number;
   harborRunsCount: number;
   swebenchRunsCount: number;
+  deepsweRunsCount?: number;
   restatedRunsCount?: number;
   warmedCacheKeys: string[];
   error?: string;

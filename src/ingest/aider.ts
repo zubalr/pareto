@@ -295,7 +295,7 @@ export async function ingestAiderPolyglot(options: IngestAiderOptions): Promise<
           hasLatency,
           hasPassAtK,
           hasCi,
-          passAtK,
+          passAtK || "{}",
           item.prompt_tokens ?? null,
           item.completion_tokens ?? null,
           createdAt

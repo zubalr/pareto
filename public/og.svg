@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#09090b"/>
+  <!-- subtle grid -->
+  <g stroke="#18181b" stroke-width="1" stroke-dasharray="4 6">
+    <line x1="140" y1="90" x2="140" y2="540"/>
+    <line x1="140" y1="540" x2="1100" y2="540"/>
+    <line x1="140" y1="315" x2="1100" y2="315"/>
+    <line x1="620" y1="90" x2="620" y2="540"/>
+    <line x1="860" y1="90" x2="860" y2="540"/>
+    <line x1="380" y1="90" x2="380" y2="540"/>
+  </g>
+  <!-- frontier polyline -->
+  <polyline
+    points="230,430 420,410 560,390 700,330 800,290 1010,180"
+    fill="none" stroke="#10b981" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- frontier points -->
+  <g fill="#10b981" stroke="#064e3b" stroke-width="3">
+    <circle cx="230" cy="430" r="10"/>
+    <circle cx="420" cy="410" r="10"/>
+    <circle cx="560" cy="390" r="10"/>
+    <circle cx="1010" cy="180" r="12"/>
+  </g>
+  <!-- dominated points (quiet) -->
+  <g fill="#52525b" opacity="0.45">
+    <circle cx="520" cy="470" r="7"/>
+    <circle cx="660" cy="430" r="7"/>
+    <circle cx="740" cy="460" r="7"/>
+    <circle cx="900" cy="380" r="7"/>
+    <circle cx="960" cy="470" r="7"/>
+    <circle cx="840" cy="200" r="7"/>
+  </g>
+  <!-- knee -->
+  <circle cx="700" cy="330" r="18" fill="#06b6d4" stroke="#ffffff" stroke-width="5"/>
+  <!-- wordmark -->
+  <text x="140" y="70" font-family="Menlo, Consolas, monospace" font-size="30" font-weight="bold" fill="#f4f4f5" letter-spacing="4">PARETO</text>
+  <text x="140" y="600" font-family="Menlo, Consolas, monospace" font-size="24" fill="#a1a1aa">cost vs solve rate · where the knee is · what it costs</text>
+  <text x="820" y="70" font-family="Menlo, Consolas, monospace" font-size="18" fill="#67e8f9">KNEE — best trade-off</text>
+</svg>

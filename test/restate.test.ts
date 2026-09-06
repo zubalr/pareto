@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculateNormalizedCost } from "../src/ingest/restate";
+import { calculateNormalizedCost, computeUnmatchedBreakdown } from "../src/ingest/restate";
 
 describe("calculateNormalizedCost", () => {
   it("computes normalized total cost and cost per task accurately", () => {
@@ -52,5 +52,48 @@ describe("calculateNormalizedCost", () => {
     const result = calculateNormalizedCost(317591, 120418, 225, 0.08, 0.28);
     expect(result.costUsdNormalized).toBe(0.059124);
     expect(result.costPerTaskNormalized).toBe(0.000263);
+  });
+});
+
+describe("computeUnmatchedBreakdown", () => {
+  it("categorizes missing tokens as no_tokens", () => {
+    const pricing = new Set(["mod-1"]);
+    const aliases = new Set(["mod-1", "mod-2"]);
+    const runs = [
+      { tokens_in: null, model_id: "mod-1" },
+      { tokens_in: undefined, model_id: "mod-2" },
+      { tokens_in: 0, model_id: "mod-3" },
+    ];
+    const res = computeUnmatchedBreakdown(runs, pricing, aliases);
+    expect(res).toEqual({ no_alias: 0, no_snapshot: 0, no_tokens: 3 });
+  });
+
+  it("categorizes unmapped models with tokens as no_alias", () => {
+    const pricing = new Set(["mod-1"]);
+    const aliases = new Set(["mod-1"]);
+    const runs = [{ tokens_in: 1000, model_id: "mod-unmapped" }];
+    const res = computeUnmatchedBreakdown(runs, pricing, aliases);
+    expect(res).toEqual({ no_alias: 1, no_snapshot: 0, no_tokens: 0 });
+  });
+
+  it("categorizes aliased models without pricing snapshots as no_snapshot", () => {
+    const pricing = new Set(["mod-1"]);
+    const aliases = new Set(["mod-1", "mod-2"]);
+    const runs = [{ tokens_in: 5000, model_id: "mod-2" }];
+    const res = computeUnmatchedBreakdown(runs, pricing, aliases);
+    expect(res).toEqual({ no_alias: 0, no_snapshot: 1, no_tokens: 0 });
+  });
+
+  it("correctly partitions a mixed set of runs", () => {
+    const pricing = new Set(["mod-1"]);
+    const aliases = new Set(["mod-1", "mod-2"]);
+    const runs = [
+      { tokens_in: null, model_id: "mod-1" },
+      { tokens_in: 1000, model_id: "mod-2" }, // has alias, no snapshot -> no_snapshot
+      { tokens_in: 2000, model_id: "mod-3" }, // no alias -> no_alias
+      { tokens_in: 0, model_id: "mod-2" }, // 0 tokens -> no_tokens
+    ];
+    const res = computeUnmatchedBreakdown(runs, pricing, aliases);
+    expect(res).toEqual({ no_alias: 1, no_snapshot: 1, no_tokens: 2 });
   });
 });

@@ -100,9 +100,11 @@ function MethodologyPage() {
           <Formula>usd_per_task = cost_usd_total / n_tasks</Formula>
           <p className="text-xs text-zinc-400 leading-relaxed">
             Two bases are tracked: <strong>Reported</strong> (priced as published with the original
-            run) and <strong>Today</strong> (re-priced at current list rates from the{" "}
-            <code className="text-zinc-200">pricing_snapshots</code> table). When a normalized price
-            is missing, Today falls back to Reported rather than inventing a number.
+            run — the primary number) and <strong>Today</strong> (re-priced at current list rates
+            from the <code className="text-zinc-200">pricing_snapshots</code> table). A run without
+            a normalized price is <strong>omitted from Today-basis views</strong> and the table
+            shows "not restated" — Today never substitutes Reported, and a missing price is never
+            drawn as $0.
           </p>
         </div>
         <div className="pt-2 border-t border-zinc-800/80">

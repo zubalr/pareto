@@ -127,3 +127,41 @@ describe("effortRank", () => {
     expect(effortRank("turbo")).toBe(effortRank("ultra"));
   });
 });
+
+describe("Finder cheapest-at-floor", () => {
+  it("returns the cheapest run meeting the solve floor, excludes the rest", () => {
+    const result = selectFinder(tbSeed, {
+      maxCostPerTask: 50,
+      objective: "cheapest-at-floor",
+      minSolve: 35,
+    });
+    // Sol ($37.88, 37.3%) is the cheapest at or above 35%; GLM is next
+    expect(result.best?.modelDisplayName).toBe("GPT-5.6 Sol");
+    expect(result.alternatives[0].modelDisplayName).toBe("GLM-5.3");
+    const belowFloor = result.excluded.filter((e) => e.reason === "below-solve-floor");
+    expect(belowFloor.map((e) => e.run.modelDisplayName).sort()).toEqual([
+      "GPT-5.6 Luna",
+      "GPT-5.6 Terra",
+      "Grok 4.5",
+    ]);
+  });
+
+  it("honors the budget cap in combination with the floor", () => {
+    const result = selectFinder(tbSeed, {
+      maxCostPerTask: 30,
+      objective: "cheapest-at-floor",
+      minSolve: 35,
+    });
+    // Only Sol ($37.88) clears 35% but exceeds the $30 cap → nothing eligible
+    expect(result.best).toBeNull();
+    expect(result.eligible).toHaveLength(0);
+  });
+
+  it("treats a missing floor as rank-by-cost across all eligible runs", () => {
+    const result = selectFinder(tbSeed, {
+      maxCostPerTask: 50,
+      objective: "cheapest-at-floor",
+    });
+    expect(result.best?.modelDisplayName).toBe("GPT-5.6 Luna"); // $4.55 cheapest
+  });
+});

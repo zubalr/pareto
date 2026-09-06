@@ -2,6 +2,7 @@ import { ingestAiderPolyglot, AIDER_SOURCE_ID } from "./aider";
 import { ingestOpenRouterPricing } from "./openrouter";
 import { ingestHarbor } from "./harbor";
 import { ingestSWEBench } from "./swebench";
+import { ingestDeepSWE } from "./deepswe";
 import { recomputeNormalizedCosts } from "./restate";
 import { warmExplorerCache } from "./warm";
 import type { IngestPipelineResult } from "./types";
@@ -22,7 +23,7 @@ export interface RunPipelineOptions {
   ctx?: any;
   d1?: any;
   kv?: any;
-  adapters?: Array<"aider" | "openrouter" | "harbor" | "swebench" | "restate">;
+  adapters?: Array<"aider" | "openrouter" | "harbor" | "swebench" | "deepswe" | "restate">;
   retry?: boolean;
 }
 
@@ -53,7 +54,7 @@ export async function runIngestPipeline(options?: RunPipelineOptions): Promise<I
   }
 
   // Determine adapters to run
-  let targetAdapters: string[] = options?.adapters ?? ["aider", "openrouter", "harbor", "swebench", "restate"];
+  let targetAdapters: string[] = options?.adapters ?? ["aider", "openrouter", "harbor", "swebench", "deepswe", "restate"];
   if (options?.retry && !options?.adapters) {
     try {
       const lastFailed = (await d1
@@ -67,6 +68,7 @@ export async function runIngestPipeline(options?: RunPipelineOptions): Promise<I
         if (errText.includes("openrouter")) detected.push("openrouter");
         if (errText.includes("harbor")) detected.push("harbor");
         if (errText.includes("swe-bench") || errText.includes("swebench")) detected.push("swebench");
+        if (errText.includes("deepswe")) detected.push("deepswe");
 
         if (detected.length > 0) {
           detected.push("restate");
@@ -84,6 +86,7 @@ export async function runIngestPipeline(options?: RunPipelineOptions): Promise<I
     let openRouterSnapshotsCount = 0;
     let harborRunsCount = 0;
     let swebenchRunsCount = 0;
+    let deepsweRunsCount = 0;
     let matchedModels: string[] = [];
 
     // 2. Ingest Aider polyglot runs
@@ -137,7 +140,19 @@ export async function runIngestPipeline(options?: RunPipelineOptions): Promise<I
       }
     }
 
-    // 6. Recompute normalized costs from OpenRouter snapshots
+    // 6. Ingest DeepSWE v1.1 runs
+    if (targetAdapters.includes("deepswe")) {
+      console.log("[Ingest] Ingesting DeepSWE v1.1 leaderboard...");
+      try {
+        const deepsweResult = await ingestDeepSWE({ d1 });
+        deepsweRunsCount = deepsweResult.ingestedCount;
+        console.log(`[Ingest] Successfully ingested/upserted ${deepsweRunsCount} DeepSWE runs.`);
+      } catch (err: any) {
+        throw new Error(`[DeepSWE Ingest Failed] ${err?.message || err}`);
+      }
+    }
+
+    // 7. Recompute normalized costs from OpenRouter snapshots
     let restatedRunsCount = 0;
     if (targetAdapters.includes("restate") || targetAdapters.includes("openrouter")) {
       console.log("[Ingest] Recomputing normalized costs on Today basis...");
@@ -152,7 +167,7 @@ export async function runIngestPipeline(options?: RunPipelineOptions): Promise<I
       }
     }
 
-    // 7. Invalidate & warm KV caches
+    // 8. Invalidate & warm KV caches
     console.log("[Ingest] Warming default Explorer KV cache slices...");
     const warmedKeys = await warmExplorerCache(kv);
     console.log(`[Ingest] Successfully warmed KV keys: ${warmedKeys.join(", ")}`);
@@ -163,12 +178,13 @@ export async function runIngestPipeline(options?: RunPipelineOptions): Promise<I
       openRouterSnapshotsIngested: openRouterSnapshotsCount,
       harborRunsIngested: harborRunsCount,
       swebenchRunsIngested: swebenchRunsCount,
+      deepsweRunsIngested: deepsweRunsCount,
       restatedRunsCount,
       matchedModels,
       warmedCacheKeys: warmedKeys,
     };
 
-    // 8. Mark job as completed
+    // 9. Mark job as completed
     await d1
       .prepare(
         `UPDATE ingest_jobs
@@ -189,6 +205,7 @@ export async function runIngestPipeline(options?: RunPipelineOptions): Promise<I
       openRouterSnapshotsCount,
       harborRunsCount,
       swebenchRunsCount,
+      deepsweRunsCount,
       restatedRunsCount,
       warmedCacheKeys: warmedKeys,
     };

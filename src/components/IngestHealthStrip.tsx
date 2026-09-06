@@ -74,6 +74,12 @@ export function IngestHealthStrip() {
       <Activity size={10} className={health.errored ? "text-red-400" : "text-emerald-500"} />
       <span className="uppercase tracking-wider text-zinc-500">ingest</span>
       <span>{health.statusLabel}</span>
+      {health.counts && (
+        <span className="text-zinc-500">
+          · cost coverage: {health.counts.reported ?? "?"} reported /{" "}
+          {health.counts.restated ?? "?"} restated / {health.counts.total ?? "?"} runs
+        </span>
+      )}
       {health.detail && <span className="text-zinc-500">· {health.detail}</span>}
     </div>
   );

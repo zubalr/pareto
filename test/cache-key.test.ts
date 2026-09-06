@@ -103,4 +103,23 @@ describe("Canonical Explorer Key Generation", () => {
     expect(keyVersion).toBe(keySlug);
     expect(keyId).toBe(keySlug);
   });
+
+  it("handles deepswe benchmark IDs and slugs properly", () => {
+    const keySlug = buildCanonicalExplorerKey({
+      benchmarkVersionId: "deepswe",
+      costBasis: "today",
+    });
+    const keyVersion = buildCanonicalExplorerKey({
+      benchmarkVersionId: "deepswe-1.1",
+      costBasis: "today",
+    });
+    const keyId = buildCanonicalExplorerKey({
+      benchmarkVersionId: "01J8BV000000000000DEEPSWE11",
+      costBasis: "today",
+    });
+
+    expect(keySlug).toBe("explorer:01J8BV000000000000DEEPSWE11:cb=today:m=:h=:e=");
+    expect(keyVersion).toBe(keySlug);
+    expect(keyId).toBe(keySlug);
+  });
 });

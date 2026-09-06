@@ -10,6 +10,7 @@ const searchSchema = z.object({
   benchmark: z.string().optional(),
   ids: z.string().optional(),
   slugs: z.string().optional(),
+  costBasis: z.enum(["reported", "today"]).optional(),
 });
 
 export type CompareSearch = z.infer<typeof searchSchema>;
@@ -22,12 +23,14 @@ export const Route = createFileRoute("/compare")({
       benchmark: coerceString(search.benchmark),
       ids: coerceString(search.ids),
       slugs: coerceString(search.slugs),
+      costBasis: search.costBasis === "today" ? "today" : "reported",
     };
   },
   loaderDeps: ({ search }) => ({
     benchmark: search.benchmark,
     ids: search.ids,
     slugs: search.slugs,
+    costBasis: search.costBasis,
   }),
   loader: async ({ deps }) => {
     return await getCompareData({
@@ -35,6 +38,7 @@ export const Route = createFileRoute("/compare")({
         benchmarkVersionId: deps.benchmark,
         ids: parseListParam(deps.ids),
         slugs: parseListParam(deps.slugs),
+        costBasis: deps.costBasis === "today" ? "today" : "reported",
       },
     });
   },
@@ -110,6 +114,7 @@ function ComparePage() {
   const benchmarkId = search.benchmark || data.currentBenchmark?.id || "";
   const ids = parseListParam(search.ids);
   const slugs = parseListParam(search.slugs);
+  const costBasis = search.costBasis ?? "reported";
 
   const runs = data.selected;
   const has = runs.length > 0;
@@ -118,9 +123,11 @@ function ComparePage() {
   const bestSolve = has ? Math.max(...runs.map((r) => r.solveRate)) : null;
   const costed = has ? runs.filter((r) => r.hasCost && r.cost !== null && r.cost > 0) : [];
   const bestCost = costed.length ? Math.min(...costed.map((r) => r.cost as number)) : null;
+  const basisTotal = (r: ExplorerRun): number | null =>
+    costBasis === "today" ? r.costUsdNormalized : r.costUsdReported;
   const resolvedVals = costed
-    .filter((r) => r.nSolved > 0 && r.costUsdReported !== null && r.costUsdReported !== undefined)
-    .map((r) => (r.costUsdReported as number) / r.nSolved);
+    .filter((r) => r.nSolved > 0 && basisTotal(r) !== null)
+    .map((r) => (basisTotal(r) as number) / r.nSolved);
   const bestResolved = resolvedVals.length ? Math.min(...resolvedVals) : null;
 
   const updateBenchmark = (value: string) => {
@@ -227,7 +234,10 @@ function ComparePage() {
                 {data.currentBenchmark?.benchmarkName} {data.currentBenchmark?.version}
               </span>
               <span className="text-zinc-500 text-[10px] font-mono">
-                best per column bolded · badges match the Explorer board
+                {costBasis === "today"
+                  ? "today basis — runs without restated pricing show —"
+                  : "reported basis"}{" "}
+                · best per column bolded · badges match the Explorer board
               </span>
             </div>
             <div className="overflow-x-auto">
@@ -248,11 +258,10 @@ function ComparePage() {
                 </thead>
                 <tbody className="divide-y divide-zinc-800/60 text-zinc-300">
                   {runs.map((r) => {
+                    const basisTotalR = basisTotal(r);
                     const perResolved =
-                      r.costUsdReported !== null &&
-                      r.costUsdReported !== undefined &&
-                      r.nSolved > 0
-                        ? r.costUsdReported / r.nSolved
+                      basisTotalR !== null && basisTotalR !== undefined && r.nSolved > 0
+                        ? basisTotalR / r.nSolved
                         : null;
                     const tokens =
                       r.hasTokens && (r.tokensIn !== null || r.tokensOut !== null)

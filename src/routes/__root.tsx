@@ -20,6 +20,24 @@ export const Route = createRootRoute({
         content:
           "Pareto Frontier analysis of LLM benchmark solve rates against USD cost per task. Find optimal models and efficiency knees.",
       },
+      { property: "og:title", content: "Pareto — benchmark cost vs solve intelligence" },
+      {
+        property: "og:description",
+        content:
+          "Who is on the Pareto frontier, where is the knee, what does it cost? Aggregate benchmark runs with full provenance and honest coverage flags.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://pareto.jubairjashim1975.workers.dev" },
+      { property: "og:image", content: "https://pareto.jubairjashim1975.workers.dev/og.svg" },
+      { property: "og:image:type", content: "image/svg+xml" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Pareto — benchmark cost vs solve intelligence" },
+      {
+        name: "twitter:description",
+        content:
+          "Pareto frontier, knee detection, and a deterministic budget Finder across Terminal-Bench, SWE-bench, Aider, and Harbor slices.",
+      },
+      { name: "twitter:image", content: "https://pareto.jubairjashim1975.workers.dev/og.svg" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -68,6 +86,14 @@ function RootComponent() {
                 className="px-2.5 py-1 rounded transition-colors text-xs"
               >
                 Finder
+              </Link>
+              <Link
+                to="/compare"
+                activeProps={{ className: "bg-zinc-800 text-emerald-400 font-semibold" }}
+                inactiveProps={{ className: "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900" }}
+                className="px-2.5 py-1 rounded transition-colors text-xs"
+              >
+                Compare
               </Link>
               <Link
                 to="/methodology"

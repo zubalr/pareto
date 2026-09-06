@@ -1,12 +1,14 @@
 // Finder selection logic — pure, deterministic, unit-tested.
 // See DESIGN.md §8 for the product spec and the $50 Terminal-Bench worked example.
 
-export type FinderObjective = "max-solve" | "min-cost-per-resolved";
+export type FinderObjective = "max-solve" | "min-cost-per-resolved" | "cheapest-at-floor";
 
 export interface FinderCriterion {
   maxCostPerTask: number;
   maxLatencyP50Seconds?: number | null;
   objective: FinderObjective;
+  /** Solve-rate floor (%) for the cheapest-at-floor objective. */
+  minSolve?: number | null;
 }
 
 export type FinderExclusionReason =
@@ -14,6 +16,7 @@ export type FinderExclusionReason =
   | "over-budget"
   | "no-latency-telemetry"
   | "over-latency-budget"
+  | "below-solve-floor" // cheapest-at-floor: solve rate under the requested floor
   | "unrankable"; // e.g. zero resolved tasks under min-cost-per-resolved
 
 export interface FinderCandidate {
@@ -70,6 +73,13 @@ export function selectFinder<T extends FinderCandidate>(
     criterion.maxLatencyP50Seconds !== undefined &&
     Number.isFinite(criterion.maxLatencyP50Seconds) &&
     criterion.maxLatencyP50Seconds > 0;
+  const minSolveFloor =
+    criterion.objective === "cheapest-at-floor" &&
+    criterion.minSolve !== null &&
+    criterion.minSolve !== undefined &&
+    Number.isFinite(criterion.minSolve)
+      ? (criterion.minSolve as number)
+      : null;
 
   for (const run of runs) {
     const cost = run.cost;
@@ -91,6 +101,10 @@ export function selectFinder<T extends FinderCandidate>(
         continue;
       }
     }
+    if (minSolveFloor !== null && run.solveRate < minSolveFloor) {
+      excluded.push({ run, reason: "below-solve-floor" });
+      continue;
+    }
     eligible.push(run);
   }
 
@@ -101,6 +115,7 @@ export function selectFinder<T extends FinderCandidate>(
 
   const rankKey = (r: T): number | null => {
     if (criterion.objective === "max-solve") return r.solveRate;
+    if (criterion.objective === "cheapest-at-floor") return r.cost ?? null;
     return costPerResolved(r);
   };
 
@@ -117,7 +132,8 @@ export function selectFinder<T extends FinderCandidate>(
     if (criterion.objective === "max-solve") {
       if (kb !== ka) return kb - ka; // higher solve first
     } else {
-      if (ka !== kb) return ka - kb; // lower $/resolved first
+      // cheapest-at-floor and min-cost-per-resolved both rank ascending
+      if (ka !== kb) return ka - kb;
     }
     const ca = a.cost ?? 0;
     const cb = b.cost ?? 0;

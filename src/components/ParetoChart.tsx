@@ -284,6 +284,8 @@ export function ParetoChart({
             const other =
               costBasis === "today" ? r.costPerTaskReported : r.costPerTaskNormalized;
             const shown = costBasis === "today" ? r.costPerTaskNormalized : r.costPerTaskReported;
+            // Never render $0 for a missing price — absence is "—", not zero.
+            const shownLabel = shown !== null && shown !== undefined ? fmtUsd(shown) : "— (not restated)";
 
             const flag = (ok: boolean, label: string) =>
               `<span style="color:${ok ? "#d4d4d8" : "#3f3f46"};">${label}${ok ? " ✓" : " –"}</span>`;
@@ -298,7 +300,7 @@ export function ParetoChart({
                 </div>
                 <div style="margin-bottom: 6px; padding: 3px 0; border-top: 1px solid #27272a; border-bottom: 1px solid #27272a;">
                   <div>Solve rate: <strong style="color:#ffffff;">${r.solveRate.toFixed(1)}%</strong> <span style="color:#71717a;">(${r.nSolved}/${r.nTotal} tasks)</span></div>
-                  <div>Cost / task: <strong style="color:#ffffff;">${fmtUsd(shown ?? 0)}</strong> <span style="color:#52525b;">(${costBasis})</span>${other !== null && other !== undefined && other !== shown ? ` <span style="color:#52525b;">· alt ${fmtUsd(other)}</span>` : ""}</div>
+                  <div>Cost / task: <strong style="color:#ffffff;">${shownLabel}</strong> <span style="color:#52525b;">(${costBasis})</span>${other !== null && other !== undefined && other !== shown ? ` <span style="color:#52525b;">· alt ${fmtUsd(other)}</span>` : ""}</div>
                   <div>Total run cost: <span style="color:#a1a1aa;">$${(r.costUsdReported ?? 0).toFixed(0)}</span></div>
                   ${r.latencyP50Seconds !== null && r.latencyP50Seconds !== undefined ? `<div>Latency p50: <span style="color:#a1a1aa;">${r.latencyP50Seconds.toFixed(1)}s</span></div>` : ""}
                 </div>

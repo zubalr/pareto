@@ -24,6 +24,56 @@ export async function fetchOpenRouterModels(url = OPENROUTER_MODELS_URL): Promis
   return json.data;
 }
 
+export const OPENROUTER_MODEL_ALIASES: Record<string, string[]> = {
+  "anthropic/claude-sonnet-4": [
+    "claude-sonnet-4-20250514-no-thinking",
+    "claude-sonnet-4-20250514-32k-thinking",
+    "claude-sonnet-4",
+  ],
+  "anthropic/claude-opus-4": [
+    "claude-opus-4-20250514-no-think",
+    "claude-opus-4-20250514-32k-thinking",
+    "claude-opus-4",
+  ],
+  "anthropic/claude-fable-5": ["fable-5", "claude-fable-5"],
+  "anthropic/claude-fable-5.1": ["fable-5-1", "claude-fable-5-1"],
+  "anthropic/claude-sonnet-4.6": ["claude-sonnet-4-6"],
+  "anthropic/claude-opus-4.8": ["claude-opus-4-8"],
+  "anthropic/claude-opus-5": ["claude-opus-5"],
+  "anthropic/claude-sonnet-5": ["claude-sonnet-5"],
+  "google/gemini-2.5-flash": [
+    "gemini-2-5-flash-preview-05-20-no-think",
+    "gemini-2-5-flash-preview-05-20-24k-think",
+    "gemini-2.5-flash",
+  ],
+  "google/gemini-2.5-pro": [
+    "gemini-2-5-pro-preview-06-05-default-think",
+    "gemini-2-5-pro-preview-06-05-32k-think",
+    "gemini-2.5-pro",
+  ],
+  "google/gemini-3.1-pro-preview": ["gemini-3-1-pro-preview"],
+  "google/gemini-3.5-flash": ["gemini-3-5-flash"],
+  "google/gemini-3.6-flash": ["gemini-3-6-flash"],
+  "google/gemini-3.7-flash": ["gemini-3-7-flash"],
+  "google/gemini-3.8-flash": ["gemini-3-8-flash"],
+  "deepseek/deepseek-v3.2-exp": [
+    "deepseek-v3-2-exp-chat",
+    "deepseek-v3-2-exp-reasoner",
+  ],
+  "deepseek/deepseek-v4-flash": ["deepseek-v4-flash"],
+  "deepseek/deepseek-v4-pro": ["deepseek-v4-pro"],
+  "openai/gpt-4.1": ["o3-high-gpt-4-1", "gpt-4-1"],
+  "openai/gpt-5.4": ["gpt-5-4"],
+  "openai/gpt-5.5": ["gpt-5-5"],
+  "openai/gpt-5.6-luna": ["gpt-5-6-luna"],
+  "openai/gpt-5.6-sol": ["gpt-5-6-sol"],
+  "openai/gpt-5.6-terra": ["gpt-5-6-terra"],
+  "openai/gpt-6-astra": ["gpt-6-astra"],
+  "x-ai/grok-4.5": ["grok-4", "grok-4-5"],
+  "x-ai/grok-4.6": ["grok-4-6"],
+  "qwen/qwen3.8-max": ["qwen3-8-max"],
+};
+
 export interface IngestOpenRouterOptions {
   d1: any;
   modelsUrl?: string;
@@ -56,6 +106,37 @@ export async function ingestOpenRouterPricing(
   const aliasToModelId = new Map<string, string>();
   for (const a of (aliasesRes.results || []) as Array<{ model_id: string; alias: string }>) {
     aliasToModelId.set(a.alias.toLowerCase(), a.model_id);
+  }
+
+  // Pre-seed known OpenRouter aliases into aliasToModelId and D1 if model exists
+  const extraAliasStatements: any[] = [];
+  for (const [orId, targetSlugs] of Object.entries(OPENROUTER_MODEL_ALIASES)) {
+    for (const targetSlug of targetSlugs) {
+      const modelId = slugToModelId.get(targetSlug.toLowerCase());
+      if (modelId) {
+        const fullLower = orId.toLowerCase();
+        const bareLower = fullLower.replace(/^[^/]+\//, "");
+        aliasToModelId.set(fullLower, modelId);
+        aliasToModelId.set(bareLower, modelId);
+
+        extraAliasStatements.push(
+          d1
+            .prepare("INSERT OR IGNORE INTO model_aliases (id, model_id, alias) VALUES (?, ?, ?)")
+            .bind(generateDeterministicId("01J8AL", `${modelId}:${orId}`), modelId, orId)
+        );
+      }
+    }
+  }
+
+  if (extraAliasStatements.length > 0) {
+    for (let i = 0; i < extraAliasStatements.length; i += 50) {
+      const chunk = extraAliasStatements.slice(i, i + 50);
+      try {
+        await d1.batch(chunk);
+      } catch (e) {
+        console.warn("[OpenRouter] Non-critical error inserting model_aliases:", e);
+      }
+    }
   }
 
   const matchedSnapshots = new Map<

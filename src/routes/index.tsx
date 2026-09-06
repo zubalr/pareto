@@ -460,7 +460,11 @@ function ExplorerPage() {
               {pinnedIds.length > 0 && (
                 <Link
                   to="/compare"
-                  search={{ ids: pinnedIds.join(","), benchmark: selectedBenchmarkId || undefined }}
+                  search={{
+                    ids: pinnedIds.join(","),
+                    benchmark: selectedBenchmarkId || undefined,
+                    costBasis: costBasis === "today" ? "today" : undefined,
+                  }}
                   className="px-2.5 py-1 rounded text-[11px] bg-cyan-950/40 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-950/60 transition-colors inline-flex items-center gap-1.5"
                 >
                   <Columns3 size={11} />

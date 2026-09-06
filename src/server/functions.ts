@@ -51,7 +51,7 @@ export interface FinderResponse {
 }
 
 export const getFinderData = createServerFn()
-  .validator((input: { benchmarkVersionId?: string }) => input)
+  .validator((input: { benchmarkVersionId?: string; costBasis?: "reported" | "today" }) => input)
   .handler(async ({ data }): Promise<FinderResponse> => {
     try {
       const db = getDb();
@@ -107,6 +107,7 @@ export const getFinderData = createServerFn()
         .innerJoin(sources, eq(benchmarkRuns.sourceId, sources.id))
         .where(eq(benchmarkRuns.benchmarkVersionId, activeBenchmark.id));
 
+      const basisToday = data.costBasis === "today";
       const candidates = rows.map((r) => ({
         id: r.run.id,
         sourceRunId: r.run.sourceRunId,
@@ -116,8 +117,10 @@ export const getFinderData = createServerFn()
         harnessVersion: r.harnessVer.version,
         effortPresetSlug: r.effort.slug,
         solveRate: r.run.solveRate,
-        cost: r.run.costPerTaskReported,
-        costUsdTotal: r.run.costUsdReported,
+        // Today basis = normalized price only; missing restated pricing stays
+        // null so the run is excluded rather than silently repriced from reported.
+        cost: basisToday ? r.run.costPerTaskNormalized : r.run.costPerTaskReported,
+        costUsdTotal: basisToday ? r.run.costUsdNormalized : r.run.costUsdReported,
         nSolved: r.run.nSolved,
         latencyP50Seconds: r.run.latencyP50Seconds,
         sourceName: r.source.name,
@@ -320,7 +323,12 @@ export interface CompareResponse {
 }
 
 export const getCompareData = createServerFn()
-  .validator((input: { benchmarkVersionId?: string; ids?: string[]; slugs?: string[] }) => input)
+  .validator((input: {
+    benchmarkVersionId?: string;
+    ids?: string[];
+    slugs?: string[];
+    costBasis?: "reported" | "today";
+  }) => input)
   .handler(async ({ data }): Promise<CompareResponse> => {
     try {
       const db = getDb();
@@ -585,6 +593,11 @@ export interface IngestHealthResponse {
   restatedCostCount: number;
   reportedCostCount: number;
   totalRuns: number;
+  unmatched: {
+    no_alias: number;
+    no_snapshot: number;
+    no_tokens: number;
+  };
   error?: string | null;
 }
 
@@ -634,6 +647,25 @@ export const getIngestHealth = createServerFn().handler(
         )
         .first();
 
+      const unmatchedRes = await (db as any).session.client
+        .prepare(
+          `SELECT
+             sum(case when r.tokens_in is null or r.tokens_in <= 0 then 1 else 0 end) as no_tokens,
+             sum(case when (r.tokens_in is not null and r.tokens_in > 0) and ma.model_id is null then 1 else 0 end) as no_alias,
+             sum(case when (r.tokens_in is not null and r.tokens_in > 0) and ma.model_id is not null and ps.model_id is null then 1 else 0 end) as no_snapshot
+           FROM benchmark_runs r
+           LEFT JOIN (SELECT DISTINCT model_id FROM model_aliases WHERE alias LIKE '%/%') ma ON r.model_id = ma.model_id
+           LEFT JOIN (SELECT DISTINCT model_id FROM pricing_snapshots) ps ON r.model_id = ps.model_id
+           WHERE r.cost_usd_normalized is null`
+        )
+        .first();
+
+      const unmatched = {
+        no_alias: Number(unmatchedRes?.no_alias ?? 0),
+        no_snapshot: Number(unmatchedRes?.no_snapshot ?? 0),
+        no_tokens: Number(unmatchedRes?.no_tokens ?? 0),
+      };
+
       return {
         status: lastJobRes?.status === "failed" ? "degraded" : "ok",
         lastJob: {
@@ -647,6 +679,7 @@ export const getIngestHealth = createServerFn().handler(
         restatedCostCount: costCountsRes?.normalized_count ?? 0,
         reportedCostCount: costCountsRes?.reported_count ?? 0,
         totalRuns: costCountsRes?.total_count ?? 0,
+        unmatched,
         error: null,
       };
     } catch (err: any) {
@@ -663,6 +696,11 @@ export const getIngestHealth = createServerFn().handler(
         restatedCostCount: 0,
         reportedCostCount: 0,
         totalRuns: 0,
+        unmatched: {
+          no_alias: 0,
+          no_snapshot: 0,
+          no_tokens: 0,
+        },
         error: err?.message || String(err),
       };
     }

@@ -9,7 +9,9 @@ const searchSchema = z.object({
   benchmark: z.string().optional(),
   maxCost: z.string().optional(),
   maxLatency: z.string().optional(),
-  objective: z.enum(["max-solve", "min-cost-per-resolved"]).optional(),
+  minSolve: z.string().optional(),
+  objective: z.enum(["max-solve", "min-cost-per-resolved", "cheapest-at-floor"]).optional(),
+  costBasis: z.enum(["reported", "today"]).optional(),
 });
 
 export type FinderSearch = z.infer<typeof searchSchema>;
@@ -24,13 +26,26 @@ export const Route = createFileRoute("/finder")({
       benchmark: coerceString(search.benchmark),
       maxCost: coerceString(search.maxCost),
       maxLatency: coerceString(search.maxLatency),
+      minSolve: coerceString(search.minSolve),
       objective:
-        search.objective === "min-cost-per-resolved" ? "min-cost-per-resolved" : search.objective === "max-solve" ? "max-solve" : undefined,
+        search.objective === "min-cost-per-resolved"
+          ? "min-cost-per-resolved"
+          : search.objective === "cheapest-at-floor"
+            ? "cheapest-at-floor"
+            : search.objective === "max-solve"
+              ? "max-solve"
+              : undefined,
+      costBasis: search.costBasis === "today" ? "today" : "reported",
     };
   },
-  loaderDeps: ({ search }) => ({ benchmark: search.benchmark }),
-  loader: async ({ deps: { benchmark } }) => {
-    return await getFinderData({ data: { benchmarkVersionId: benchmark } });
+  loaderDeps: ({ search }) => ({ benchmark: search.benchmark, costBasis: search.costBasis }),
+  loader: async ({ deps }) => {
+    return await getFinderData({
+      data: {
+        benchmarkVersionId: deps.benchmark,
+        costBasis: deps.costBasis === "today" ? "today" : "reported",
+      },
+    });
   },
   component: FinderPage,
 });
@@ -138,7 +153,9 @@ function FinderPage() {
   const benchmarkId = search.benchmark || data.currentBenchmark?.id || "";
   const maxCost = search.maxCost ?? "50";
   const maxLatency = search.maxLatency ?? "";
+  const minSolve = search.minSolve ?? "";
   const objective: FinderObjective = search.objective ?? "max-solve";
+  const costBasis = search.costBasis ?? "reported";
 
   const updateSearch = (patch: Partial<FinderSearch>) => {
     navigate({ search: (prev: FinderSearch) => ({ ...prev, ...patch }), replace: true });
@@ -146,14 +163,16 @@ function FinderPage() {
 
   const capNum = Number(maxCost);
   const latNum = Number(maxLatency);
+  const minSolveNum = Number(minSolve);
   const result = React.useMemo(() => {
     if (!Number.isFinite(capNum) || capNum <= 0) return null;
     return selectFinder(data.candidates, {
       maxCostPerTask: capNum,
       maxLatencyP50Seconds: maxLatency && Number.isFinite(latNum) && latNum > 0 ? latNum : null,
       objective,
+      minSolve: objective === "cheapest-at-floor" && minSolve && Number.isFinite(minSolveNum) ? minSolveNum : null,
     });
-  }, [data.candidates, capNum, latNum, maxLatency, objective]);
+  }, [data.candidates, capNum, latNum, maxLatency, minSolve, minSolveNum, objective]);
 
   const overBudget = (result?.excluded ?? []).filter((e) => e.reason === "over-budget");
   const cheapestOverBudget = overBudget.length
@@ -176,7 +195,7 @@ function FinderPage() {
           </span>
         </div>
         <div className="hidden md:flex items-center gap-2 text-[10px] text-zinc-500 font-mono">
-          <span>reported cost basis</span>
+          <span>{costBasis === "today" ? "today basis — runs without restated pricing excluded" : "reported cost basis"}</span>
           <span>&bull;</span>
           <a href="/methodology" className="underline hover:text-zinc-300">
             rules
@@ -268,6 +287,7 @@ function FinderPage() {
                 [
                   ["max-solve", "Max solve rate"],
                   ["min-cost-per-resolved", "Min $ / resolved"],
+                  ["cheapest-at-floor", "Cheapest at solve floor"],
                 ] as Array<[FinderObjective, string]>
               ).map(([value, label]) => (
                 <label
@@ -285,6 +305,29 @@ function FinderPage() {
                 </label>
               ))}
             </div>
+            {objective === "cheapest-at-floor" && (
+              <div className="flex flex-col gap-1 mt-1">
+                <label className="text-[10px] text-zinc-400" htmlFor="min-solve">
+                  Min solve floor (%)
+                </label>
+                <input
+                  id="min-solve"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={minSolve}
+                  onChange={(e) => updateSearch({ minSolve: e.target.value })}
+                  placeholder="e.g. 35"
+                  aria-label="Minimum solve rate percent for cheapest-at-floor"
+                  className="w-full bg-zinc-900 border border-zinc-700/80 text-zinc-100 rounded px-2 py-1 text-xs focus:outline-none focus:border-emerald-500 font-mono placeholder:text-zinc-600"
+                />
+                <p className="text-[9px] text-zinc-500 leading-snug">
+                  Cheapest run whose solve rate ≥ floor. Runs below the floor are excluded, not
+                  silently accepted.
+                </p>
+              </div>
+            )}
             <p className="text-[9px] text-zinc-500 leading-snug">
               $/resolved = total run cost ÷ resolved tasks. It hides failures — read it next to
               solve rate.

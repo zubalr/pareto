@@ -24,27 +24,27 @@ No second bill or paid add-on is permitted. To ensure zero overage, an operation
 | **Workers Logs** | **20,000,000** events / month (+$0.60 / 1M) | **2,000,000** events / month | Observability enabled with concise hit/miss telemetry. No per-row dumps or request body logs. |
 | **Logpush** | 10M events included (Paid) | **0 (Disabled)** | Disabled. No Logpush pipelines configured. |
 | **Queues / DO / R2 / Workflows** | Not used | **0 (Disabled)** | Excluded from the application stack. Zero cost. |
-| **Cron Ingest** | **15 min CPU** / invocation (Paid included) | **1 invocation / day** | Configured in `wrangler.jsonc` as `0 6 * * *` (30 runs/month). Sequences Aider YAML, OpenRouter pricing, Harbor / tbench, and SWE-bench Verified (0 inference spend), batch D1 writes, warms default KV keys. |
+| **Cron Ingest** | **15 min CPU** / invocation (Paid included) | **1 invocation / day** | Configured in `wrangler.jsonc` as `0 6 * * *` (30 runs/month). Sequences Aider YAML, OpenRouter pricing, Harbor / tbench, SWE-bench Verified, and Datacurve DeepSWE v1.1 (0 inference spend), batch D1 writes, warms default reported and today KV keys. |
 
 ---
 
 ## 2. Monthly Usage Models: 1k, 10k, and 100k Page Views (Including Daily Ingest Cron & Cost Restatements)
 
-Assuming a conservative **90% KV cache hit rate** on user requests plus 1 automated daily ingest cron (`30` executions/mo, writing ~290 D1 adapter rows + ~20 normalized cost restatements per day across Aider, OpenRouter, Harbor, and SWE-bench):
+Assuming a conservative **90% KV cache hit rate** on user requests plus 1 automated daily ingest cron (`30` executions/mo, writing ~360 D1 adapter rows + ~25 normalized cost restatements per day across Aider, OpenRouter, Harbor, SWE-bench, and DeepSWE v1.1):
 - **Cache Hit**: 1 Worker Request, 1 KV Read, ~3–5 ms CPU, 0 D1 Rows Read, 0 D1 Rows Written.
 - **Cache Miss**: 1 Worker Request, 2 KV Reads, 1 KV Write, ~12–15 ms CPU, ~14 D1 Rows Read (indexed), 0 D1 Rows Written.
-- **Daily Ingest Cron**: 1 Cron Invocation/day, ~90–140 ms CPU, ~310 D1 Rows Written (batch), ~5 KV Writes (cache warming), 0 Inference Spend.
+- **Daily Ingest Cron**: 1 Cron Invocation/day, ~110–160 ms CPU, ~385 D1 Rows Written (batch), ~10 KV Writes (dual reported/today cache warming across 5 benchmark slices), 0 Inference Spend.
 
 | Cloudflare Meter | 1,000 Views + Ingest | 10,000 Views + Ingest | 100,000 Views + Ingest | Included Paid Allotment | Red-Line Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Worker Requests / Crons** | 1,030 (0.01%) | 10,030 (0.1%) | 100,030 (1.0%) | 10,000,000 | **Inside Red-Line** (10.0% of 1M limit) |
-| **Worker CPU-ms** | 9,600 ms (0.032%) | 63,600 ms (0.21%) | 553,600 ms (1.85%) | 30,000,000 ms | **Inside Red-Line** (18.5% of 3M limit) |
+| **Worker CPU-ms** | 10,200 ms (0.034%) | 64,200 ms (0.21%) | 554,200 ms (1.85%) | 30,000,000 ms | **Inside Red-Line** (18.5% of 3M limit) |
 | **KV Reads** | 1,160 (0.012%) | 11,060 (0.11%) | 105,060 (1.05%) | 10,000,000 | **Inside Red-Line** (10.5% of 1M limit) |
-| **KV Writes** | 250 (0.025%) | 1,150 (0.12%) | 5,150 (0.52%) | 1,000,000 | **Inside Red-Line** (5.2% of 100k limit) |
-| **KV Storage** | ~3.5 MB | ~6.5 MB | ~18 MB | 1,000 MB (1 GB) | **Inside Red-Line** (18% of 100 MB limit) |
+| **KV Writes** | 400 (0.04%) | 1,300 (0.13%) | 5,300 (0.53%) | 1,000,000 | **Inside Red-Line** (5.3% of 100k limit) |
+| **KV Storage** | ~4.5 MB | ~7.5 MB | ~20 MB | 1,000 MB (1 GB) | **Inside Red-Line** (20% of 100 MB limit) |
 | **D1 Rows Read** | 10,400 (<0.0001%) | 23,000 (<0.0001%) | 79,000 (0.0003%) | 25,000,000,000 | **Inside Red-Line** (0.003% of 2.5B limit) |
-| **D1 Rows Written** | 9,300 (0.019%) | 9,300 (0.019%) | 9,300 (0.019%) | 50,000,000 | **Inside Red-Line** (0.19% of 5M limit) |
-| **Workers Logs** | 1,800 (0.009%) | 15,300 (0.077%) | 150,300 (0.75%) | 20,000,000 | **Inside Red-Line** (7.5% of 2M limit) |
+| **D1 Rows Written** | 11,550 (0.023%) | 11,550 (0.023%) | 11,550 (0.023%) | 50,000,000 | **Inside Red-Line** (0.23% of 5M limit) |
+| **Workers Logs** | 1,900 (0.009%) | 15,400 (0.077%) | 150,400 (0.75%) | 20,000,000 | **Inside Red-Line** (7.5% of 2M limit) |
 
 At all modeled tiers (1k, 10k, and 100k views/month), **every meter stays strictly inside the 10% red-line**, guaranteeing zero overage and zero extra charges beyond the base $5/month Workers Paid fee.
 

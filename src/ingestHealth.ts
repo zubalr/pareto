@@ -8,6 +8,8 @@ export interface IngestHealth {
   statusLabel: string;
   detail: string | null;
   errored: boolean;
+  /** Cost-coverage counts when the endpoint exposes them. */
+  counts?: { reported: number; restated: number; total: number };
 }
 
 export function parseHealthPayload(json: unknown): IngestHealth | null {
@@ -16,6 +18,13 @@ export function parseHealthPayload(json: unknown): IngestHealth | null {
 
   const errText =
     typeof rec.error === "string" && rec.error.trim() !== "" ? rec.error.trim() : null;
+
+  const counts = {
+    reported: typeof rec.reportedCostCount === "number" ? rec.reportedCostCount : null,
+    restated: typeof rec.restatedCostCount === "number" ? rec.restatedCostCount : null,
+    total: typeof rec.totalRuns === "number" ? rec.totalRuns : null,
+  };
+  const hasCounts = counts.reported !== null || counts.restated !== null || counts.total !== null;
 
   // { status: "ok" | "error" | ... } — the most likely convention
   if (typeof rec.status === "string") {
@@ -35,6 +44,7 @@ export function parseHealthPayload(json: unknown): IngestHealth | null {
       statusLabel: `last job: ${lastJob ?? rec.status}`,
       detail: errText,
       errored,
+      ...(hasCounts ? { counts } : {}),
     };
   }
 
@@ -45,6 +55,7 @@ export function parseHealthPayload(json: unknown): IngestHealth | null {
       statusLabel: rec.ok ? "last job: ok" : "last job: failed",
       detail: errText,
       errored: !rec.ok,
+      ...(hasCounts ? { counts } : {}),
     };
   }
 
@@ -58,6 +69,7 @@ export function parseHealthPayload(json: unknown): IngestHealth | null {
       statusLabel: `last job: ${status}`,
       detail: errText,
       errored,
+      ...(hasCounts ? { counts } : {}),
     };
   }
 

@@ -328,7 +328,7 @@ export async function ingestHarbor({
           hasTokens ? tokensIn : null,
           hasTokens ? tokensOut : null,
           row.metrics?.avg_trial_duration_sec ?? null,
-          passAtKJson,
+          passAtKJson || "{}",
           hasTokens,
           hasCost,
           hasLatency,

@@ -72,6 +72,30 @@ export default {
           total_count?: number;
         } | null;
 
+        // 4. Unmatched breakdown for unrestated runs
+        const unmatchedRes = (await d1
+          .prepare(
+            `SELECT
+               sum(case when r.tokens_in is null or r.tokens_in <= 0 then 1 else 0 end) as no_tokens,
+               sum(case when (r.tokens_in is not null and r.tokens_in > 0) and ma.model_id is null then 1 else 0 end) as no_alias,
+               sum(case when (r.tokens_in is not null and r.tokens_in > 0) and ma.model_id is not null and ps.model_id is null then 1 else 0 end) as no_snapshot
+             FROM benchmark_runs r
+             LEFT JOIN (SELECT DISTINCT model_id FROM model_aliases WHERE alias LIKE '%/%') ma ON r.model_id = ma.model_id
+             LEFT JOIN (SELECT DISTINCT model_id FROM pricing_snapshots) ps ON r.model_id = ps.model_id
+             WHERE r.cost_usd_normalized is null`
+          )
+          .first()) as {
+          no_tokens?: number;
+          no_alias?: number;
+          no_snapshot?: number;
+        } | null;
+
+        const unmatched = {
+          no_alias: Number(unmatchedRes?.no_alias ?? 0),
+          no_snapshot: Number(unmatchedRes?.no_snapshot ?? 0),
+          no_tokens: Number(unmatchedRes?.no_tokens ?? 0),
+        };
+
         const health = {
           status: lastJob?.status === "failed" ? "degraded" : "ok",
           last_job: lastJob?.status || "unknown",
@@ -88,6 +112,7 @@ export default {
           restatedCostCount: costCountsRes?.normalized_count ?? 0,
           reportedCostCount: costCountsRes?.reported_count ?? 0,
           totalRuns: costCountsRes?.total_count ?? 0,
+          unmatched,
         };
 
         return new Response(JSON.stringify(health, null, 2), {

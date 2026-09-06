@@ -44,9 +44,13 @@ INSERT OR REPLACE INTO model_aliases (id, model_id, alias) VALUES
 ('01J8ALIAS000000000000GROK45', '01J8MODEL000000000000GROK45', 'x-ai/grok-4.5'),
 ('01J8ALIAS000000000000GLM53', '01J8MODEL00000000000000GLM53', 'glm-5-3'),
 ('01J8ALIAS0000000000000LUNA', '01J8MODEL00000000000000LUNA', 'gpt-5-6-luna'),
+('01J8ALIAS00000000000OR_LUNA', '01J8MODEL00000000000000LUNA', 'openai/gpt-5.6-luna'),
 ('01J8ALIAS000000000000TERRA', '01J8MODEL000000000000TERRA', 'gpt-5-6-terra'),
+('01J8ALIAS00000000000OR_TERR', '01J8MODEL000000000000TERRA', 'openai/gpt-5.6-terra'),
 ('01J8ALIAS0000000000000SOL', '01J8MODEL000000000000000SOL', 'gpt-5-6-sol'),
-('01J8ALIAS00000000000FABLE5', '01J8MODEL0000000000000FABLE5', 'fable-5');
+('01J8ALIAS000000000000OR_SOL', '01J8MODEL000000000000000SOL', 'openai/gpt-5.6-sol'),
+('01J8ALIAS00000000000FABLE5', '01J8MODEL0000000000000FABLE5', 'fable-5'),
+('01J8ALIAS0000000000OR_FABL5', '01J8MODEL0000000000000FABLE5', 'anthropic/claude-fable-5');
 
 -- Harnesses
 INSERT OR REPLACE INTO harnesses (id, slug, name) VALUES
@@ -67,14 +71,16 @@ INSERT OR REPLACE INTO benchmarks (id, slug, name, description) VALUES
 ('01J8BENCH0000000000000000TB', 'terminal-bench', 'Terminal-Bench', 'Command-line execution and agentic reasoning suite'),
 ('01J8BENCH0000000000000SWEV', 'swe-bench-verified', 'SWE-bench Verified', 'Real-world software engineering GitHub benchmark'),
 ('01J8BENCH000000000000AIDER', 'aider-polyglot', 'Aider Polyglot', 'Aider polyglot coding benchmark (225 tasks across multiple languages)'),
-('01J8BENCH000000000000HARBOR', 'terminal-bench-2', 'Terminal-Bench 2.0', 'Harbor Terminal-Bench leaderboard runs');
+('01J8BENCH000000000000HARBOR', 'terminal-bench-2', 'Terminal-Bench 2.0', 'Harbor Terminal-Bench leaderboard runs'),
+('01J8BENCH00000000000DEEPSWE', 'deepswe', 'DeepSWE', 'Datacurve DeepSWE long-horizon software engineering benchmark');
 
 -- Benchmark Versions
 INSERT OR REPLACE INTO benchmark_versions (id, benchmark_id, version, n_tasks) VALUES
 ('01J8BV0000000000000000TB40', '01J8BENCH0000000000000000TB', '4.0', 66),
 ('01J8BV000000000000000SWE10', '01J8BENCH0000000000000SWEV', '1.0', 500),
 ('01J8BVAIDER00000000000POLY', '01J8BENCH000000000000AIDER', '1.0', 225),
-('01J8BV000000000000000TB20', '01J8BENCH000000000000HARBOR', '2.0', 66);
+('01J8BV000000000000000TB20', '01J8BENCH000000000000HARBOR', '2.0', 66),
+('01J8BV000000000000DEEPSWE11', '01J8BENCH00000000000DEEPSWE', '1.1', 113);
 
 -- Effort Presets
 INSERT OR REPLACE INTO effort_presets (id, slug, name) VALUES
@@ -91,7 +97,8 @@ INSERT OR REPLACE INTO sources (id, slug, name, official, url) VALUES
 ('01J8SOURCE000000000000AIDER', 'aider_polyglot', 'Aider Polyglot Leaderboard', 0, 'https://aider.chat/docs/leaderboards/'),
 ('01J8SOURCE000000000OPENROUT', 'openrouter', 'OpenRouter Models API', 0, 'https://openrouter.ai/api/v1/models'),
 ('01J8SOURCE00000000000HARBOR', 'harbor', 'Harbor / Terminal-Bench Leaderboard', 1, 'https://www.tbench.ai/'),
-('01J8SOURCE0000000000000SWE', 'swe_bench_experiments', 'SWE-bench Experiments Leaderboard', 1, 'https://www.swebench.com/');
+('01J8SOURCE0000000000000SWE', 'swe_bench_experiments', 'SWE-bench Experiments Leaderboard', 1, 'https://www.swebench.com/'),
+('01J8SOURCEDEEPSWE000000000', 'deepswe', 'DeepSWE Leaderboard', 1, 'https://deepswe.datacurve.ai');
 
 -- Benchmark Runs: Terminal-Bench 4.0 (66 tasks)
 -- Total USD / 66 = cost per task

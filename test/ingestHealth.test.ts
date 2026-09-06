@@ -39,3 +39,18 @@ describe("parseHealthPayload", () => {
     expect(parseHealthPayload("ok")).toBeNull();
   });
 });
+
+describe("parseHealthPayload cost counts", () => {
+  it("surfaces reported/restated/total cost counts when present", () => {
+    const h = parseHealthPayload({
+      status: "ok",
+      reportedCostCount: 100,
+      restatedCostCount: 20,
+      totalRuns: 281,
+    });
+    expect(h?.counts).toEqual({ reported: 100, restated: 20, total: 281 });
+  });
+  it("omits counts when the endpoint does not expose them", () => {
+    expect(parseHealthPayload({ status: "ok" })?.counts).toBeUndefined();
+  });
+});

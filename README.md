@@ -1,5 +1,8 @@
 # Pareto — benchmark cost vs solve intelligence
 
+[![Live board](https://img.shields.io/badge/live-board-10b981)](https://pareto.jubairjashim1975.workers.dev)
+[![Today basis](https://img.shields.io/badge/cost-reported_%7C_today-06b6d4)](https://pareto.jubairjashim1975.workers.dev/?costBasis=today)
+
 A dense, dark, operate-mode board that answers one question in ten seconds:
 **who is on the Pareto frontier, where is the knee, and what does it cost?**
 

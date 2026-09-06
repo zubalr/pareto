@@ -1,4 +1,4 @@
-import { fetchExplorerData, buildCanonicalExplorerKey } from "../server/explorer-service";
+import { fetchExplorerData, fetchBenchmarkOptions, buildCanonicalExplorerKey } from "../server/explorer-service";
 
 export const WARM_BENCHMARK_VERSION_IDS = [
   "01J8BV0000000000000000TB40",
@@ -10,13 +10,29 @@ export const WARM_BENCHMARK_VERSION_IDS = [
 
 const COST_BASES: Array<"reported" | "today"> = ["reported", "today"];
 
-export async function warmExplorerCache(kv?: any): Promise<string[]> {
+export async function warmExplorerCache(kv?: any, d1?: any): Promise<string[]> {
   const warmedKeys: string[] = [];
 
   // Invalidate cached catalog and default frontier keys if kv is provided
   if (kv) {
     try {
       await kv.delete("catalog:benchmark_options");
+    } catch (err) {
+      console.warn("[WarmCache] Error invalidating catalog:benchmark_options:", err);
+    }
+  }
+
+  // Put fresh benchmark options into KV so new benchmark versions appear immediately
+  try {
+    console.log("[WarmCache] Writing fresh KV cache for: catalog:benchmark_options");
+    await fetchBenchmarkOptions(kv, true, d1);
+    warmedKeys.push("catalog:benchmark_options");
+  } catch (err) {
+    console.warn("[WarmCache] Error writing catalog:benchmark_options:", err);
+  }
+
+  if (kv) {
+    try {
       for (const bvId of WARM_BENCHMARK_VERSION_IDS) {
         for (const cb of COST_BASES) {
           const key = buildCanonicalExplorerKey({
@@ -43,6 +59,7 @@ export async function warmExplorerCache(kv?: any): Promise<string[]> {
         benchmarkVersionId: bvId,
         costBasis: cb,
         forceRefresh: true,
+        d1,
       });
       warmedKeys.push(key);
     }

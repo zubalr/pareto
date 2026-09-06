@@ -24,20 +24,22 @@ export const Route = createRootRoute({
       {
         property: "og:description",
         content:
-          "Who is on the Pareto frontier, where is the knee, what does it cost? Aggregate benchmark runs with full provenance and honest coverage flags.",
+          "Who is on the Pareto frontier, where is the knee, what does it cost? Aggregates from Terminal-Bench, Harbor, Aider, SWE-bench, and DeepSWE runs with full provenance and honest coverage flags.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://pareto.jubairjashim1975.workers.dev" },
-      { property: "og:image", content: "https://pareto.jubairjashim1975.workers.dev/og.svg" },
-      { property: "og:image:type", content: "image/svg+xml" },
+      { property: "og:image", content: "https://pareto.jubairjashim1975.workers.dev/og.png" },
+      { property: "og:image:type", content: "image/png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Pareto — benchmark cost vs solve intelligence" },
       {
         name: "twitter:description",
         content:
-          "Pareto frontier, knee detection, and a deterministic budget Finder across Terminal-Bench, SWE-bench, Aider, and Harbor slices.",
+          "Pareto frontier, knee detection, and a deterministic budget Finder across Terminal-Bench, Harbor TB2, Aider polyglot, SWE-bench Verified, and DeepSWE slices.",
       },
-      { name: "twitter:image", content: "https://pareto.jubairjashim1975.workers.dev/og.svg" },
+      { name: "twitter:image", content: "https://pareto.jubairjashim1975.workers.dev/og.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

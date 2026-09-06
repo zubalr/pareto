@@ -1,8 +1,10 @@
 import handler from "@tanstack/react-start/server-entry";
 import { runIngestPipeline } from "./ingest";
+import { setGlobalEnv } from "./db";
 
 export default {
   async fetch(request: Request, env: any, ctx: any) {
+    setGlobalEnv(env);
     const url = new URL(request.url);
 
     // Health endpoint: GET /api/ingest/health
@@ -159,6 +161,7 @@ export default {
   },
 
   async scheduled(event: any, env: any, ctx: any) {
+    setGlobalEnv(env);
     console.log(`[Scheduled] Ingest cron triggered: ${event.cron} at ${new Date().toISOString()}`);
     ctx.waitUntil(runIngestPipeline({ env, ctx }));
   },

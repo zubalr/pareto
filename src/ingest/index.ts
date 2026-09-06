@@ -7,6 +7,7 @@ import { recomputeNormalizedCosts } from "./restate";
 import { warmExplorerCache } from "./warm";
 import type { IngestPipelineResult } from "./types";
 import { env as workersEnv } from "cloudflare:workers";
+import { setGlobalEnv } from "../db";
 
 function generateDeterministicId(prefix: string, seed: string): string {
   let hash = 5381;
@@ -28,6 +29,9 @@ export interface RunPipelineOptions {
 }
 
 export async function runIngestPipeline(options?: RunPipelineOptions): Promise<IngestPipelineResult> {
+  if (options?.env) {
+    setGlobalEnv(options.env);
+  }
   const d1 = options?.d1 ?? options?.env?.DB ?? workersEnv?.DB;
   const kv = options?.kv ?? options?.env?.FRONTIER ?? workersEnv?.FRONTIER;
 
@@ -169,7 +173,7 @@ export async function runIngestPipeline(options?: RunPipelineOptions): Promise<I
 
     // 8. Invalidate & warm KV caches
     console.log("[Ingest] Warming default Explorer KV cache slices...");
-    const warmedKeys = await warmExplorerCache(kv);
+    const warmedKeys = await warmExplorerCache(kv, d1);
     console.log(`[Ingest] Successfully warmed KV keys: ${warmedKeys.join(", ")}`);
 
     const completedAt = new Date().toISOString();

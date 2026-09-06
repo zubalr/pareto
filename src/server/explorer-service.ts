@@ -85,10 +85,58 @@ export interface ExplorerInput {
   efforts?: string[];
   costBasis?: "reported" | "today";
   forceRefresh?: boolean;
+  d1?: any;
 }
 
 import { buildCanonicalExplorerKey } from "./keys";
 export { buildCanonicalExplorerKey };
+
+export async function fetchBenchmarkOptions(kv?: any, forceRefresh: boolean = false, d1?: any): Promise<BenchmarkOption[]> {
+  const activeKv = kv ?? getKv();
+  if (activeKv && !forceRefresh) {
+    try {
+      const cached = (await activeKv.get("catalog:benchmark_options", "json")) as BenchmarkOption[] | null;
+      if (cached && Array.isArray(cached) && cached.length > 0) {
+        return cached;
+      }
+    } catch (e) {
+      console.warn("KV catalog:benchmark_options read error:", e);
+    }
+  }
+
+  const db = getDb(d1);
+  const rawBenchmarks = await db
+    .select({
+      benchmarkVersionId: benchmarkVersions.id,
+      benchmarkSlug: benchmarks.slug,
+      benchmarkName: benchmarks.name,
+      version: benchmarkVersions.version,
+      nTasks: benchmarkVersions.nTasks,
+    })
+    .from(benchmarkVersions)
+    .innerJoin(benchmarks, eq(benchmarkVersions.benchmarkId, benchmarks.id));
+
+  const benchmarkOptions: BenchmarkOption[] = rawBenchmarks.map((b) => ({
+    id: b.benchmarkVersionId,
+    benchmarkSlug: b.benchmarkSlug,
+    benchmarkName: b.benchmarkName,
+    version: b.version,
+    nTasks: b.nTasks,
+    displayLabel: `${b.benchmarkName} ${b.version} (${b.nTasks} tasks)`,
+  }));
+
+  if (activeKv && benchmarkOptions.length > 0) {
+    try {
+      await activeKv.put("catalog:benchmark_options", JSON.stringify(benchmarkOptions), {
+        expirationTtl: 86400, // 24 hours
+      });
+    } catch (e) {
+      console.warn("KV catalog:benchmark_options put error:", e);
+    }
+  }
+
+  return benchmarkOptions;
+}
 
 export async function fetchExplorerData(data: ExplorerInput): Promise<ExplorerResponse> {
   const costBasis = data.costBasis ?? "reported";
@@ -118,49 +166,10 @@ export async function fetchExplorerData(data: ExplorerInput): Promise<ExplorerRe
   console.log(`[KV MISS] Key: ${cacheKey}. Executing indexed D1 query...`);
 
   try {
-    const db = getDb();
+    const db = getDb(data.d1);
 
     // 2. Fetch benchmarks with versions (check KV catalog cache first)
-    let benchmarkOptions: BenchmarkOption[] | null = null;
-    if (kv) {
-      try {
-        benchmarkOptions = (await kv.get("catalog:benchmark_options", "json")) as BenchmarkOption[] | null;
-      } catch (e) {
-        console.warn("KV catalog:benchmark_options read error:", e);
-      }
-    }
-
-    if (!benchmarkOptions || benchmarkOptions.length === 0) {
-      const rawBenchmarks = await db
-        .select({
-          benchmarkVersionId: benchmarkVersions.id,
-          benchmarkSlug: benchmarks.slug,
-          benchmarkName: benchmarks.name,
-          version: benchmarkVersions.version,
-          nTasks: benchmarkVersions.nTasks,
-        })
-        .from(benchmarkVersions)
-        .innerJoin(benchmarks, eq(benchmarkVersions.benchmarkId, benchmarks.id));
-
-      benchmarkOptions = rawBenchmarks.map((b) => ({
-        id: b.benchmarkVersionId,
-        benchmarkSlug: b.benchmarkSlug,
-        benchmarkName: b.benchmarkName,
-        version: b.version,
-        nTasks: b.nTasks,
-        displayLabel: `${b.benchmarkName} ${b.version} (${b.nTasks} tasks)`,
-      }));
-
-      if (kv && benchmarkOptions.length > 0) {
-        try {
-          await kv.put("catalog:benchmark_options", JSON.stringify(benchmarkOptions), {
-            expirationTtl: 86400, // 24 hours
-          });
-        } catch (e) {
-          console.warn("KV catalog:benchmark_options put error:", e);
-        }
-      }
-    }
+    const benchmarkOptions = await fetchBenchmarkOptions(kv, data.forceRefresh, data.d1);
 
     // Select requested benchmark or default to Terminal-Bench 4.0
     const activeBenchmark =

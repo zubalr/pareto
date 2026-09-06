@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import type { ExplorerRun } from "../server/functions";
 import { parsePassAtK, effortRank } from "../finder";
+import { buildResourceCompare } from "../resources";
 
 // Shared chrome for the Pass@k and Effort chart slots (DESIGN.md §6).
 // Coverage rule: a slot with no eligible telemetry renders the empty state —
@@ -79,11 +80,24 @@ function tooltipFlags(r: ExplorerRun): string {
   )}${flag(r.hasCi, "CI")}</div>`;
 }
 
+const MAX_PASSK_SERIES = 10;
+
 export function PassAtKChart({ runs }: { runs: ExplorerRun[] }) {
-  const seriesData = runs
+  const allSeries = runs
     .filter((r) => r.hasPassAtK)
-    .map((r) => ({ run: r, points: parsePassAtK(r.passAtK) }))
+    .map((r) => ({
+      run: r,
+      points: parsePassAtK(r.passAtK),
+      maxPct: Math.max(...parsePassAtK(r.passAtK).map((p) => p.percent), 0),
+    }))
     .filter((s) => s.points.length > 0);
+  // Frontier members first, then by best pass@k — 69-series Aider ingest must stay readable.
+  allSeries.sort((a, b) => {
+    if (a.run.isFrontier !== b.run.isFrontier) return a.run.isFrontier ? -1 : 1;
+    return b.maxPct - a.maxPct;
+  });
+  const seriesData = allSeries.slice(0, MAX_PASSK_SERIES);
+  const hiddenCount = Math.max(0, allSeries.length - seriesData.length);
 
   const chartRef = useEChart(
     () => {
@@ -187,7 +201,7 @@ export function PassAtKChart({ runs }: { runs: ExplorerRun[] }) {
     <div className="relative w-full h-[440px] bg-zinc-950 rounded border border-zinc-800/80 p-2 flex flex-col">
       <SlotHeader
         title="Pass@k ladder"
-        note={`${seriesData.length} series · x: attempts k · y: cumulative solve %`}
+        note={`${seriesData.length} shown${hiddenCount > 0 ? ` · ${hiddenCount} hidden` : ""} · x: attempts k · y: cumulative solve %`}
       />
       <div ref={chartRef} className="flex-1 w-full min-h-[300px]" />
     </div>
@@ -313,6 +327,142 @@ export function EffortChart({ runs }: { runs: ExplorerRun[] }) {
         note={`${qualifying.length} series · x: effort preset · y: solve %`}
       />
       <div ref={chartRef} className="flex-1 w-full min-h-[300px]" />
+    </div>
+  );
+}
+
+// Resource multipliers vs the cheapest costed configuration (DESIGN.md §6.3,
+// revised): grouped bars, x = metric group, bars = configurations, value =
+// multiplier vs baseline (baseline = 1.0x). Groups whose baseline telemetry is
+// missing are suppressed; configs missing a metric get no bar in that group.
+export function ResourceChart({ runs }: { runs: ExplorerRun[] }) {
+  const rc = buildResourceCompare(runs);
+
+  const chartRef = useEChart(
+    () => {
+      const groupDefs: Array<{ key: "usd" | "tokens" | "wallclock"; label: string }> = [
+        { key: "usd", label: "USD/task" },
+        { key: "tokens", label: "Tokens" },
+        { key: "wallclock", label: "Wall-clock" },
+      ].filter((g) => rc.groups[g.key]);
+
+      const lines = rc.configs.map((c, i) => ({
+        name: `${c.isBaseline ? "★ " : ""}${c.run.modelDisplayName} · ${c.run.harnessName} · ${c.run.effortPresetSlug}`,
+        type: "bar" as const,
+        data: groupDefs.map((g) => {
+          const m = c[g.key];
+          return m ? Number(m.mult.toFixed(3)) : null;
+        }),
+        itemStyle: {
+          color: c.isBaseline ? "#10b981" : SLOT_COLORS[(i + 1) % SLOT_COLORS.length],
+          opacity: c.isBaseline ? 1 : 0.85,
+        },
+        barMaxWidth: 22,
+        // baseline reference line on the first series
+        ...(i === 0
+          ? {
+              markLine: {
+                silent: true,
+                symbol: "none",
+                data: [{ yAxis: 1 }],
+                lineStyle: { color: "#71717a", type: "dashed", width: 1 },
+                label: { formatter: "baseline 1.0x", color: "#a1a1aa", fontSize: 9, fontFamily: "monospace", position: "insideEndTop" },
+              },
+            }
+          : {}),
+      }));
+
+      return {
+        backgroundColor: "transparent",
+        animationDuration: 200,
+        grid: { top: 36, right: 24, bottom: 64, left: 56 },
+        legend: {
+          bottom: 0,
+          left: "center",
+          textStyle: { color: "#a1a1aa", fontSize: 10, fontFamily: "monospace" },
+          itemWidth: 12,
+          itemHeight: 8,
+        },
+        tooltip: {
+          trigger: "item",
+          backgroundColor: "#101013",
+          borderColor: "#3f3f46",
+          borderWidth: 1,
+          textStyle: { color: "#f4f4f5", fontSize: 11, fontFamily: "monospace" },
+          formatter: (params: any) => {
+            const c = rc.configs[params.seriesIndex];
+            if (!c) return "";
+            const g = groupDefs[params.dataIndex];
+            const m = c[g.key];
+            const abs =
+              g.key === "usd"
+                ? `$${(m?.abs ?? 0).toFixed(2)}/task`
+                : g.key === "tokens"
+                  ? `${(m?.abs ?? 0).toLocaleString()} tokens`
+                  : `${(m?.abs ?? 0).toFixed(1)}s p50`;
+            return `
+              <div style="min-width: 210px; line-height: 1.55;">
+                <div style="font-weight:bold; color:#fff;">${c.run.modelDisplayName}${c.isBaseline ? " (baseline)" : ""}</div>
+                <div style="color:#a1a1aa; font-size:10px; margin-bottom:4px;">${c.run.harnessName} · ${c.run.effortPresetSlug}</div>
+                <div>${g.label}: <strong style="color:#fff;">${m ? m.mult.toFixed(2) + "x" : "—"}</strong> <span style="color:#71717a;">(${abs})</span></div>
+                <div style="color:#71717a; font-size:9px;">solve ${c.run.solveRate.toFixed(1)}%</div>
+              </div>
+            `;
+          },
+        },
+        xAxis: {
+          type: "category",
+          data: groupDefs.map((g) => g.label),
+          axisLabel: { color: "#a1a1aa", fontFamily: "monospace", fontSize: 10 },
+          axisLine: { lineStyle: { color: "#27272a" } },
+        },
+        yAxis: {
+          type: "value",
+          name: "Multiplier vs baseline",
+          nameLocation: "middle",
+          nameGap: 42,
+          nameTextStyle: { color: "#a1a1aa", fontSize: 10, fontFamily: "monospace" },
+          axisLabel: { color: "#71717a", fontFamily: "monospace", fontSize: 10, formatter: (v: number) => `${v}x` },
+          splitLine: { lineStyle: { color: "#18181b", type: "dashed" } },
+          axisLine: { lineStyle: { color: "#27272a" } },
+        },
+        series: lines,
+      };
+    },
+    [rc]
+  );
+
+  const valid =
+    rc.baseline !== null && rc.configs.length >= 2 && (rc.groups.usd || rc.groups.tokens || rc.groups.wallclock);
+
+  if (!valid) {
+    const reason =
+      rc.baseline === null
+        ? "No configuration in this slice reports cost — no baseline exists."
+        : rc.configs.length < 2
+          ? "Resource multipliers need at least two costed configurations in the slice."
+          : "No resource metrics comparable against the baseline.";
+    return (
+      <SlotEmpty title="Resource multipliers" message={reason} />
+    );
+  }
+
+  const hidden = Math.max(0, runs.filter((r) => r.hasCost && r.cost !== null && r.cost > 0).length - rc.configs.length);
+
+  return (
+    <div className="relative w-full h-[440px] bg-zinc-950 rounded border border-zinc-800/80 p-2 flex flex-col">
+      <SlotHeader
+        title="Resource multipliers"
+        note={`baseline: ${rc.baseline?.modelDisplayName} · ${rc.configs.length} configs${hidden > 0 ? ` · ${hidden} not drawn` : ""}`}
+      />
+      {rc.notes.length > 0 && (
+        <div className="px-2 pt-1.5 text-[9px] text-zinc-500 font-mono flex flex-wrap gap-x-4">
+          {rc.notes.map((n) => (
+            <span key={n}>{n}</span>
+          ))}
+        </div>
+      )}
+      <div ref={chartRef} className="flex-1 w-full min-h-[280px]" />
     </div>
   );
 }

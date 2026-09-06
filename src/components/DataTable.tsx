@@ -12,7 +12,7 @@ import type { ExplorerRun } from "../server/functions";
 
 interface DataTableProps {
   data: ExplorerRun[];
-  pinnedId: string | null;
+  pinnedIds: string[];
   hoveredId: string | null;
   onSelectPin: (id: string | null) => void;
   onHoverRow: (id: string | null) => void;
@@ -81,7 +81,7 @@ function CoverageChips({ run }: { run: ExplorerRun }) {
 
 export function DataTable({
   data,
-  pinnedId,
+  pinnedIds,
   hoveredId,
   onSelectPin,
   onHoverRow,
@@ -108,7 +108,7 @@ export function DataTable({
         header: "Configuration",
         cell: (info) => {
           const run = info.row.original;
-          const isPinned = pinnedId === run.id;
+          const isPinned = pinnedIds.includes(run.id);
           return (
             <div className="min-w-[190px]">
               <div className="font-semibold text-zinc-100 flex items-center gap-1.5">
@@ -230,7 +230,7 @@ export function DataTable({
         },
       }),
     ],
-    [pinnedId, costBasis]
+    [pinnedIds, costBasis]
   );
 
   const table = useReactTable({
@@ -301,7 +301,7 @@ export function DataTable({
           <tbody className="divide-y divide-zinc-800/60 text-zinc-300">
             {table.getRowModel().rows.map((row) => {
               const run = row.original;
-              const isPinned = pinnedId === run.id;
+              const isPinned = pinnedIds.includes(run.id);
               const isHovered = hoveredId === run.id;
               const bg = rowBg(run, isPinned, isHovered);
 
@@ -311,7 +311,7 @@ export function DataTable({
                   className={`${bg} transition-colors cursor-pointer ${
                     isPinned ? "border-l-2 border-l-amber-500" : ""
                   }`}
-                  onClick={() => onSelectPin(isPinned ? null : run.id)}
+                  onClick={() => onSelectPin(run.id)}
                   onMouseEnter={() => onHoverRow(run.id)}
                   onMouseLeave={() => onHoverRow(null)}
                 >

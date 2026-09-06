@@ -6,7 +6,7 @@ interface ParetoChartProps {
   runs: ExplorerRun[];
   frontier: ExplorerRun[];
   kneePoint: ExplorerRun | null;
-  pinnedId: string | null;
+  pinnedIds: string[];
   hoveredId: string | null;
   onSelectPin: (id: string | null) => void;
   onHoverPoint: (id: string | null) => void;
@@ -40,7 +40,7 @@ export function ParetoChart({
   runs,
   frontier,
   kneePoint,
-  pinnedId,
+  pinnedIds,
   hoveredId,
   onSelectPin,
   onHoverPoint,
@@ -49,8 +49,6 @@ export function ParetoChart({
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<any>(null);
   // Handlers registered once must read the latest pin, not the init-time one.
-  const pinnedIdRef = useRef<string | null>(pinnedId);
-  pinnedIdRef.current = pinnedId;
   const lastHoveredIndexRef = useRef<number | null>(null);
 
   // Coverage rule: a run without positive reported cost never gets an X coordinate.
@@ -82,7 +80,8 @@ export function ParetoChart({
 
         chart.on("click", (params: any) => {
           if (params.data && params.data.runId) {
-            onSelectPin(params.data.runId === pinnedIdRef.current ? null : params.data.runId);
+            // membership toggle lives in the parent (multi-pin set)
+            onSelectPin(params.data.runId);
           }
         });
 
@@ -145,7 +144,7 @@ export function ParetoChart({
 
       const scatterData = validRuns.map((r, i) => {
         const isKnee = kneePoint?.id === r.id;
-        const isPinned = pinnedId === r.id;
+        const isPinned = pinnedIds.includes(r.id);
 
         let symbolSize = 7;
         let color = COLOR.dominated;
@@ -369,7 +368,7 @@ export function ParetoChart({
     // hoveredId intentionally excluded: hover emphasis is applied via
     // dispatchAction in the effect below so tooltips are not destroyed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runs, frontier, kneePoint, pinnedId, costBasis]);
+  }, [runs, frontier, kneePoint, pinnedIds, costBasis]);
 
   // Hover sync (chart <-> table) without rebuilding the option.
   useEffect(() => {
@@ -418,10 +417,10 @@ export function ParetoChart({
             <span className="h-2 w-2 rounded-full bg-zinc-500 opacity-50 inline-block" />
             <span className="text-zinc-500">Dominated</span>
           </span>
-          {pinnedId && (
+          {pinnedIds.length > 0 && (
             <span className="flex items-center gap-1 text-amber-400">
               <Pin size={10} />
-              <span>Pinned</span>
+              <span>Pinned ({pinnedIds.length})</span>
             </span>
           )}
         </div>

@@ -3,6 +3,8 @@ import { fetchExplorerData, buildCanonicalExplorerKey } from "../server/explorer
 export const WARM_BENCHMARK_VERSION_IDS = [
   "01J8BV0000000000000000TB40",
   "01J8BVAIDER00000000000POLY",
+  "01J8BV000000000000000TB20",
+  "01J8BV000000000000000SWE10",
 ];
 
 export async function warmExplorerCache(kv?: any): Promise<string[]> {

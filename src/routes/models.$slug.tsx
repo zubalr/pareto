@@ -14,7 +14,11 @@ export type ModelSearch = z.infer<typeof searchSchema>;
 
 export const Route = createFileRoute("/models/$slug")({
   validateSearch: (search: Record<string, unknown>): ModelSearch => ({
-    benchmark: typeof search.benchmark === "string" ? search.benchmark : undefined,
+    // Numeric-looking params arrive parsed as numbers — coerce to string.
+    benchmark:
+      search.benchmark === undefined || search.benchmark === null
+        ? undefined
+        : String(search.benchmark),
   }),
   loaderDeps: ({ search }) => ({ benchmark: search.benchmark }),
   loader: async ({ deps, params }) => {
@@ -306,6 +310,19 @@ function ModelPage() {
                 No cost telemetry for this model on this benchmark — movement chart suppressed
                 (coverage rule).
               </div>
+            )}
+
+            {runs.length >= 2 && (
+              <Link
+                to="/compare"
+                search={{
+                  ids: runs.slice(0, 8).map((r) => r.id).join(","),
+                  benchmark: benchmarkId || undefined,
+                }}
+                className="text-[11px] text-cyan-300 hover:text-cyan-200 underline self-start"
+              >
+                Compare these {Math.min(runs.length, 8)} runs side by side →
+              </Link>
             )}
 
             {/* Runs table */}

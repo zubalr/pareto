@@ -16,10 +16,14 @@ export type FinderSearch = z.infer<typeof searchSchema>;
 
 export const Route = createFileRoute("/finder")({
   validateSearch: (search: Record<string, unknown>): FinderSearch => {
+    // TanStack Router parses numeric-looking params as numbers — coerce back
+    // to string so `?maxCost=33` and `?maxCost=%2233%22` both round-trip.
+    const coerceString = (v: unknown): string | undefined =>
+      v === undefined || v === null ? undefined : String(v);
     return {
-      benchmark: typeof search.benchmark === "string" ? search.benchmark : undefined,
-      maxCost: typeof search.maxCost === "string" ? search.maxCost : undefined,
-      maxLatency: typeof search.maxLatency === "string" ? search.maxLatency : undefined,
+      benchmark: coerceString(search.benchmark),
+      maxCost: coerceString(search.maxCost),
+      maxLatency: coerceString(search.maxLatency),
       objective:
         search.objective === "min-cost-per-resolved" ? "min-cost-per-resolved" : search.objective === "max-solve" ? "max-solve" : undefined,
     };
@@ -298,18 +302,30 @@ function FinderPage() {
           ) : (
             <>
               {result.best ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <ConfigCard run={result.best} rank="Best fit" tone="best" />
-                  {result.alternatives.map((alt, i) => (
-                    <ConfigCard key={alt.id} run={alt} rank={`Alternative ${i + 1}`} tone="alt" />
-                  ))}
-                  {result.alternatives.length === 0 && (
-                    <div className="bg-zinc-950 border border-zinc-800/80 rounded p-3 text-[11px] text-zinc-500 flex items-center justify-center text-center">
-                      No other eligible configuration in this slice.
-                    </div>
-                  )}
-                  {result.alternatives.length === 1 && <div className="hidden md:block" />}
-                </div>
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <ConfigCard run={result.best} rank="Best fit" tone="best" />
+                    {result.alternatives.map((alt, i) => (
+                      <ConfigCard key={alt.id} run={alt} rank={`Alternative ${i + 1}`} tone="alt" />
+                    ))}
+                    {result.alternatives.length === 0 && (
+                      <div className="bg-zinc-950 border border-zinc-800/80 rounded p-3 text-[11px] text-zinc-500 flex items-center justify-center text-center">
+                        No other eligible configuration in this slice.
+                      </div>
+                    )}
+                    {result.alternatives.length === 1 && <div className="hidden md:block" />}
+                  </div>
+                  <Link
+                    to="/compare"
+                    search={{
+                      ids: [result.best, ...result.alternatives].map((r) => r.id).join(","),
+                      benchmark: benchmarkId || undefined,
+                    }}
+                    className="text-[11px] text-cyan-300 hover:text-cyan-200 underline inline-flex items-center gap-1 self-start"
+                  >
+                    Compare best + alternatives side by side →
+                  </Link>
+                </>
               ) : (
                 <div className="bg-zinc-950 border border-zinc-800/80 rounded p-6 flex flex-col items-center gap-2 text-center">
                   <span className="text-zinc-300 text-xs font-mono">

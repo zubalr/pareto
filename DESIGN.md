@@ -44,10 +44,18 @@ no emoji-as-icon (lucide-react icons only). One screen, reading order top-to-bot
   hint) because the Pareto-One-Bench Rule depends on it. Below: cost basis toggle,
   then multi-selects for models / harnesses / effort with `all` or `n/N` hints.
   Empty multi-select semantics stated in-rail: **empty = all configurations with data**.
-- URL is the source of truth. Every filter, the pin, and the cost basis live in search
-  params (`?benchmark=&models=&harnesses=&efforts=&costBasis=&pinned=`); filtered URLs
-  round-trip through `validateSearch` (arrays coerce from single values).
+- **Chart slot switcher (Phase 2)**: above the chart card, tabs `Pareto | Pass@k | Effort`
+  write the `?chart=` search param (Pareto is the default and clears the param to keep
+  URLs clean). Tabs for slots with no eligible telemetry carry a quiet `EMPTY` badge;
+  selecting one shows the coverage empty state, never a fabricated chart (§6).
+- **URL is the source of truth.** Every filter, the pin, the cost basis, and the chart
+  slot live in search params (`?benchmark=&models=&harnesses=&efforts=&costBasis=&pinned=&chart=`);
+  filtered URLs round-trip through `validateSearch`. Note: TanStack Router parses
+  numeric-looking params as numbers, so all route validators coerce params back to
+  strings (a `?maxCost=33` must not silently vanish on the next navigate — this bug
+  was found in browser QA and fixed, see §10).
 - Banner stays: numbers are compiled/seed, not an official leaderboard.
+- Nav header links Explorer / Finder / Methodology.
 
 ## 2. Scatter encodings
 
@@ -108,10 +116,11 @@ Quiet dominated, loud frontier, one focal knee. Nothing else may compete.
   never a value substitution.
 - **Chart header count**: `plotted/total` is always visible so a suppressed or
   filtered-down scatter can't silently masquerade as the whole board.
-- **Pass@k slot**: no seed row has `has_pass_at_k = 1`, so the slot renders the quiet
-  empty state ("no pass@k telemetry in this slice; chart suppressed rather than
-  fabricated · spec: DESIGN.md §6") — see §6. The day `hasPassAtK` data lands, the slot
-  renders the ladder instead. No lying chart, ever.
+- **Pass@k slot**: implemented as a chart tab (§8 notes); with no `has_pass_at_k`
+  rows in the slice it renders the quiet empty state ("no pass@k telemetry in this
+  slice; chart suppressed rather than fabricated") and the tab carries an `EMPTY`
+  badge. The day pass@k data lands (Aider ingest), the slot renders the ladder —
+  k vs cumulative solve, one series per configuration. No lying chart, ever.
 
 ## 5. Table
 
@@ -167,6 +176,99 @@ palette, dominated/secondary series quiet per §3.
   marked; points right-and-up = resource well spent; right-and-down = wasted spend.
 - **Example**: baseline GLM-5.3 · max = (1.0×, +0); GLM-5.3 · max ×2-trial voting =
   (2.1×, +3.2 pts) — worth it only if the viewer prices 3.2 points above 1.1× cost.
+
+## 8. Finder (`/finder`) — Phase 2
+
+A deterministic budget filter over one benchmark version. It is explicitly **not** a
+recommender: it applies the researcher's constraint, states its ranking rule, and shows
+its exclusions. Selection logic is a pure module (`src/finder.ts`, unit-tested in
+`test/finder.test.ts`); the route reads the slice via the read-only
+`getFinderData` server function (D1 only, no KV writes).
+
+- **Inputs** (all URL params): `benchmark` (required, single), `maxCost` ($/task cap),
+  `maxLatency` (optional p50 seconds cap), `objective` = `max-solve` (default) or
+  `min-cost-per-resolved`. Quick presets $10/$25/$50/$100.
+- **Eligibility**: reported cost basis only — a cap in Today-basis dollars cannot be
+  checked honestly until normalized pricing covers every row. A run qualifies only
+  with positive reported cost ≤ cap; missing cost ⇒ excluded (`no-cost-telemetry`),
+  never assumed within budget. A latency cap excludes unmeasured runs
+  (`no-latency-telemetry`) and over-cap runs.
+- **Ranking**: `max-solve` → solve rate desc; `min-cost-per-resolved` →
+  `costUsdTotal / nSolved` asc (needs `nSolved > 0`, else `unrankable`). Ties break on
+  cost, then run id — deterministic and reproducible from the URL.
+- **Output**: the winning run as a full config card (model, harness · effort, solve,
+  $/task, $/resolved, total, p50, provenance: source name ●/○ and `sourceRunId`, link
+  to `/models/{slug}`), up to two alternatives (ranked next, different models
+  preferred so the choice is real), and an exclusion ledger table with per-run
+  reasons. When nothing qualifies, the empty state names the closest over-budget run
+  and its delta.
+- **Worked example ($50 TB 4.0 seed, documented acceptance case)**: 5 of 10 runs
+  excluded for budget (Opus 5 $90.91, Opus 4.8 $98.48, Fable 5 $110.61, Sonnet 5
+  $145.45, Grok 4.6 $54.55); **GLM-5.3 wins max-solve at 41.8% ($40.91/task)**,
+  alternatives GPT-5.6 Sol (37.3%) and Terra (21.5%). Switching to min-$/resolved
+  crowns GPT-5.6 Luna at $27.27 per resolved task (11 resolved, $300 total) — the
+  amortized metric rewards cheap partial success, which is why it is table-only on
+  the Explorer.
+- **Live Aider data**: with Aider Polyglot 1.0 ingested (69 runs, 225 tasks,
+  `source = Aider Polyglot Leaderboard`, all rows `has_pass_at_k = 1`,
+  `pass_at_k = {"1": x, "2": y}`), the same rules apply unchanged; free models
+  (`cost = 0`, e.g. local models) are excluded from budget checks as
+  `no-cost-telemetry`-equivalent (cost ≤ 0 is not a verifiable budget fit and cannot
+  sit on the log scatter).
+
+## 9. Model page (`/models/$slug`) — Phase 2
+
+One base model across harnesses/efforts on a single benchmark version (search param
+`benchmark`, default TB 4.0). Read-only `getModelData` server function computes the
+bench-wide frontier/knee (reported basis) and returns the model's runs in that
+context, plus the bench frontier polyline for background.
+
+- Stat tiles: runs on the slice (vs total), best solve, cheapest $/task, count on
+  frontier.
+- **Movement chart**: this model's runs as points on the log-$ scatter (knee cyan,
+  frontier emerald, dominated gray), with the bench frontier dashed behind — "how the
+  model moves across harnesses and efforts" against the board it came from.
+  Suppressed when the model has no positive cost (coverage rule).
+- Table: harness [+version], effort, solve (n/n), $/task, $/resolved, p50, **pass@k
+  values inline** (e.g. `k1:52% k2:88%`), five coverage chips, source with
+  `sourceRunId` tooltip.
+- Unknown slug renders the shell with "no runs for this model on this benchmark"
+  plus the slice's run count, so a typo is distinguishable from an empty bench.
+
+### Chart slots — implementation notes (updates §6)
+
+- **Pass@k**: implemented (`chart=passk`). Series = configuration; frontier members
+  emphasized. Because Aider ingest delivers 69 series, the slot shows the top 10
+  (frontier first, then best pass@k) and states `N hidden` in the header — no silent
+  truncation, no 69-line hairball.
+- **Effort**: implemented (`chart=effort`). One line per model+harness pair with ≥2
+  distinct effort presets (X ordinal low→…→max via `effortRank`); 4 qualifying
+  series on live Aider data (e.g. gpt-5 · Aider at low/medium/high).
+- **Pareto** remains the default slot; `?chart=` is omitted for it.
+
+## 10. Browser QA log (Phase 2)
+
+Environment: `npx wrangler dev --port 8787` (local D1: TB 4.0 + SWE-bench Verified
+seed + Aider Polyglot ingest), ZCode in-app browser, viewport 1600×1000. Production
+`pareto.jubairjashim1975.workers.dev` currently serves a build **without** the Phase 2
+routes (`/finder`, `/models/*` return an app shell without route content), so per the
+brief this QA ran locally; the patch needs deploy.
+
+| # | Check | Result |
+|---|---|---|
+| 1 | `/finder?maxCost=50` TB seed → GLM-5.3 best fit, Sol+Terra alternatives, 5 over-budget in ledger | PASS |
+| 2 | Objective switch → min-$/resolved → GPT-5.6 Luna best ($27.27/resolved) | PASS |
+| 3 | $33 cap → Terra best fit; Sol/GBM over budget; 3 eligible | PASS |
+| 4 | Search-param round-trip incl. `maxCost` after interactions | PASS (after fix, see #9) |
+| 5 | `?chart=passk` on Aider → ladder plots 10 series (59 hidden noted), k=1→2 cumulative solve | PASS |
+| 6 | `?chart=passk` on TB seed → coverage empty state + `EMPTY` tab badge | PASS |
+| 7 | `?chart=effort` on Aider → 4 series; on TB → coverage empty state | PASS |
+| 8 | `/models/gpt-5` (Aider) → 3 runs, knee/FRONTIER badges, pass@k inline, movement chart; `/models/glm-5-3` (TB) → 1 run 41.8% | PASS |
+| 9 | **Defect found & fixed**: TanStack Router parses `?maxCost=33` as a number; `typeof === "string"` guards dropped it on the next navigate. All route validators now coerce numeric params to strings | FIXED |
+| 10 | Table row hover → chart point highlight; click row → pin (`?pinned=`, amber ring + row) | PASS |
+| 11 | Explorer Pareto slot unchanged on TB (knee GLM-5.3, frontier polyline, quiet dominated) | PASS |
+| 12 | `pnpm test --run` | PASS (24+ tests incl. 9 finder tests) |
+| 13 | Known limitation (not a defect): chart-point tooltip cannot be exercised via synthetic pointer events in the harness; formatter verified by code review, wiring unchanged from Phase 1 | NOTE |
 
 ## 7. Typography & chrome
 

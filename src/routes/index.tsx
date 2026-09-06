@@ -1,10 +1,10 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import * as React from "react";
 import { z } from "zod";
-import { Zap } from "lucide-react";
+import { Zap, Columns3 } from "lucide-react";
 import { getExplorerData } from "../server/functions";
 import { ParetoChart } from "../components/ParetoChart";
-import { PassAtKChart, EffortChart } from "../components/ChartSlots";
+import { PassAtKChart, EffortChart, ResourceChart } from "../components/ChartSlots";
 import { DataTable } from "../components/DataTable";
 import { FilterRail } from "../components/FilterRail";
 import type { ExplorerRun } from "../server/functions";
@@ -16,7 +16,7 @@ const searchSchema = z.object({
   efforts: z.array(z.string()).optional(),
   costBasis: z.enum(["reported", "today"]).optional(),
   pinned: z.string().optional(),
-  chart: z.enum(["pareto", "passk", "effort"]).optional(),
+  chart: z.enum(["pareto", "passk", "effort", "resources"]).optional(),
 });
 
 export type ExplorerSearch = z.infer<typeof searchSchema>;
@@ -29,18 +29,23 @@ export const Route = createFileRoute("/")({
       if (Array.isArray(val)) return val.map(String);
       return [String(val)];
     };
+    // Numeric-looking params arrive parsed as numbers — coerce back to string.
+    const coerceString = (v: unknown): string | undefined =>
+      v === undefined || v === null ? undefined : String(v);
 
     return {
-      benchmark: typeof search.benchmark === "string" ? search.benchmark : undefined,
+      benchmark: coerceString(search.benchmark),
       models: coerceArray(search.models),
       harnesses: coerceArray(search.harnesses),
       efforts: coerceArray(search.efforts),
       costBasis: search.costBasis === "today" ? "today" : "reported",
-      pinned: typeof search.pinned === "string" ? search.pinned : undefined,
+      pinned: coerceString(search.pinned),
       chart:
-        search.chart === "passk" || search.chart === "effort" || search.chart === "pareto"
+        search.chart === "passk" || search.chart === "effort" || search.chart === "resources"
           ? search.chart
-          : undefined,
+          : search.chart === "pareto"
+            ? "pareto"
+            : undefined,
     };
   },
   loaderDeps: ({ search }) => ({ search }),
@@ -107,13 +112,20 @@ function ChartSlotTabs({
   onSelect,
   hasPassAtK,
   hasEffortPairs,
+  hasResources,
 }: {
-  active: "pareto" | "passk" | "effort";
-  onSelect: (slot: "pareto" | "passk" | "effort") => void;
+  active: "pareto" | "passk" | "effort" | "resources";
+  onSelect: (slot: "pareto" | "passk" | "effort" | "resources") => void;
   hasPassAtK: boolean;
   hasEffortPairs: boolean;
+  hasResources: boolean;
 }) {
-  const tabs: Array<{ id: "pareto" | "passk" | "effort"; label: string; ready: boolean; title: string }> = [
+  const tabs: Array<{
+    id: "pareto" | "passk" | "effort" | "resources";
+    label: string;
+    ready: boolean;
+    title: string;
+  }> = [
     { id: "pareto", label: "Pareto", ready: true, title: "Cost vs solve rate frontier" },
     {
       id: "passk",
@@ -128,6 +140,14 @@ function ChartSlotTabs({
       title: hasEffortPairs
         ? "Solve rate across effort presets"
         : "Needs a model+harness pair at 2+ efforts — none in this slice",
+    },
+    {
+      id: "resources",
+      label: "Resources",
+      ready: hasResources,
+      title: hasResources
+        ? "USD, tokens, wall-clock multipliers vs the cheapest costed baseline"
+        : "Needs at least two costed configurations — none in this slice",
     },
   ];
   return (
@@ -165,7 +185,10 @@ function ExplorerPage() {
   const selectedHarnesses = search.harnesses ?? [];
   const selectedEfforts = search.efforts ?? [];
   const costBasis = search.costBasis ?? "reported";
-  const pinnedId = search.pinned ?? null;
+  const pinnedIds = React.useMemo(
+    () => (search.pinned ?? "").split(",").map((s) => s.trim()).filter(Boolean),
+    [search.pinned]
+  );
   const chartSlot = search.chart ?? "pareto";
 
   // Search param updaters — the URL is the single source of truth for filters.
@@ -231,13 +254,21 @@ function ExplorerPage() {
   };
 
   const handleSelectPin = (id: string | null) => {
-    updateSearch((prev) => ({
-      ...prev,
-      pinned: id ?? undefined,
-    }));
+    if (id === null) return;
+    updateSearch((prev) => {
+      // Multi-pin: the param is a comma-separated set; clicking toggles membership.
+      const current = (prev.pinned ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+      const next = current.includes(id)
+        ? current.filter((s) => s !== id)
+        : [...current, id].slice(-8); // compare matrix caps at 8
+      return {
+        ...prev,
+        pinned: next.length > 0 ? next.join(",") : undefined,
+      };
+    });
   };
 
-  const handleSelectChart = (slot: "pareto" | "passk" | "effort") => {
+  const handleSelectChart = (slot: "pareto" | "passk" | "effort" | "resources") => {
     updateSearch((prev) => ({
       ...prev,
       chart: slot === "pareto" ? undefined : slot, // pareto is the default → keep URLs clean
@@ -256,7 +287,7 @@ function ExplorerPage() {
     selectedModels.length > 0 ||
     selectedHarnesses.length > 0 ||
     selectedEfforts.length > 0 ||
-    pinnedId !== null;
+    pinnedIds.length > 0;
 
   const plottedRuns = data.allRuns.filter((r) => r.hasCost && r.cost !== null && r.cost > 0);
   const knee = data.kneePoint;
@@ -270,6 +301,7 @@ function ExplorerPage() {
     }
     return Array.from(m.values()).filter((s) => s.size >= 2).length;
   })();
+  const costedCount = data.allRuns.filter((r) => r.hasCost && r.cost !== null && r.cost > 0).length;
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-[#09090b]">
@@ -383,17 +415,30 @@ function ExplorerPage() {
           )}
 
           {/* Chart slot switcher — Pareto default; slots are coverage-gated */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <ChartSlotTabs
               active={chartSlot}
               onSelect={handleSelectChart}
               hasPassAtK={passKReady}
               hasEffortPairs={effortPairCount > 0}
+              hasResources={costedCount >= 2}
             />
-            <span className="text-[10px] text-zinc-600 font-mono">
-              slot: {chartSlot}
-              {chartSlot !== "pareto" ? ` (?chart=${chartSlot})` : ""}
-            </span>
+            <div className="flex items-center gap-3">
+              {pinnedIds.length > 0 && (
+                <Link
+                  to="/compare"
+                  search={{ ids: pinnedIds.join(","), benchmark: selectedBenchmarkId || undefined }}
+                  className="px-2.5 py-1 rounded text-[11px] bg-cyan-950/40 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-950/60 transition-colors inline-flex items-center gap-1.5"
+                >
+                  <Columns3 size={11} />
+                  Compare pins ({pinnedIds.length})
+                </Link>
+              )}
+              <span className="text-[10px] text-zinc-600 font-mono">
+                slot: {chartSlot}
+                {chartSlot !== "pareto" ? ` (?chart=${chartSlot})` : ""}
+              </span>
+            </div>
           </div>
 
           {chartSlot === "pareto" && (
@@ -401,7 +446,7 @@ function ExplorerPage() {
               runs={data.allRuns}
               frontier={data.frontier}
               kneePoint={knee}
-              pinnedId={pinnedId}
+              pinnedIds={pinnedIds}
               hoveredId={hoveredId}
               onSelectPin={handleSelectPin}
               onHoverPoint={setHoveredId}
@@ -410,11 +455,12 @@ function ExplorerPage() {
           )}
           {chartSlot === "passk" && <PassAtKChart runs={data.allRuns} />}
           {chartSlot === "effort" && <EffortChart runs={data.allRuns} />}
+          {chartSlot === "resources" && <ResourceChart runs={data.allRuns} />}
 
           {/* Configurations table */}
           <DataTable
             data={data.allRuns}
-            pinnedId={pinnedId}
+            pinnedIds={pinnedIds}
             hoveredId={hoveredId}
             onSelectPin={handleSelectPin}
             onHoverRow={setHoveredId}

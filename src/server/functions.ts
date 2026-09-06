@@ -14,6 +14,7 @@ import {
 import { eq, and, inArray } from "drizzle-orm";
 import { dominate, knee, Point } from "../metrics";
 import type { FinderCandidate } from "../finder";
+import { selectCompareRuns } from "../compare";
 
 export type {
   ExplorerRun,
@@ -22,7 +23,12 @@ export type {
   ExplorerResponse,
   ExplorerInput,
 } from "./explorer-service";
-import { fetchExplorerData, type ExplorerInput, type ExplorerResponse } from "./explorer-service";
+import {
+  fetchExplorerData,
+  type ExplorerInput,
+  type ExplorerResponse,
+  type BenchmarkOption,
+} from "./explorer-service";
 
 export const getExplorerData = createServerFn()
   .validator((input: ExplorerInput) => input)
@@ -288,6 +294,159 @@ export const getModelData = createServerFn()
         model: null,
         runs: [],
         benchFrontier: [],
+        benchRunCount: 0,
+        error: err?.message || "Failed to load catalog data from D1.",
+      };
+    }
+  });
+
+// ---------------------------------------------------------------------------
+// Compare matrix — 2–8 configurations on ONE benchmark version.
+// Read-only D1; frontier/knee decoration is computed bench-wide so matrix rows
+// carry the same badges as the Explorer. Same-benchmark guarantee is structural:
+// the query is per benchmark version, so foreign ids simply don't resolve and
+// come back listed as unknown.
+// ---------------------------------------------------------------------------
+
+export interface CompareResponse {
+  benchmarkOptions: BenchmarkOption[];
+  currentBenchmark: BenchmarkOption | null;
+  selected: ExplorerRun[];
+  unknownIds: string[];
+  unknownSlugs: string[];
+  truncated: boolean;
+  benchRunCount: number;
+  error: string | null;
+}
+
+export const getCompareData = createServerFn()
+  .validator((input: { benchmarkVersionId?: string; ids?: string[]; slugs?: string[] }) => input)
+  .handler(async ({ data }): Promise<CompareResponse> => {
+    try {
+      const db = getDb();
+
+      const rawBenchmarks = await db
+        .select({
+          benchmarkVersionId: benchmarkVersions.id,
+          benchmarkSlug: benchmarks.slug,
+          benchmarkName: benchmarks.name,
+          version: benchmarkVersions.version,
+          nTasks: benchmarkVersions.nTasks,
+        })
+        .from(benchmarkVersions)
+        .innerJoin(benchmarks, eq(benchmarkVersions.benchmarkId, benchmarks.id));
+
+      const benchmarkOptions: BenchmarkOption[] = rawBenchmarks.map((b) => ({
+        id: b.benchmarkVersionId,
+        benchmarkSlug: b.benchmarkSlug,
+        benchmarkName: b.benchmarkName,
+        version: b.version,
+        nTasks: b.nTasks,
+        displayLabel: `${b.benchmarkName} ${b.version} (${b.nTasks} tasks)`,
+      }));
+
+      const activeBenchmark =
+        benchmarkOptions.find(
+          (b) => b.id === data.benchmarkVersionId || b.benchmarkSlug === data.benchmarkVersionId
+        ) ||
+        benchmarkOptions.find((b) => b.benchmarkSlug === "terminal-bench" && b.version === "4.0") ||
+        benchmarkOptions[0] ||
+        null;
+
+      if (!activeBenchmark) {
+        return { benchmarkOptions: [], currentBenchmark: null, selected: [], unknownIds: [], unknownSlugs: [], truncated: false, benchRunCount: 0, error: "No benchmarks found in database." };
+      }
+
+      const rows = await db
+        .select({
+          run: benchmarkRuns,
+          model: models,
+          provider: providers,
+          harness: harnesses,
+          harnessVer: harnessVersions,
+          effort: effortPresets,
+          source: sources,
+        })
+        .from(benchmarkRuns)
+        .innerJoin(models, eq(benchmarkRuns.modelId, models.id))
+        .innerJoin(providers, eq(models.providerId, providers.id))
+        .innerJoin(harnessVersions, eq(benchmarkRuns.harnessVersionId, harnessVersions.id))
+        .innerJoin(harnesses, eq(harnessVersions.harnessId, harnesses.id))
+        .innerJoin(effortPresets, eq(benchmarkRuns.effortPresetId, effortPresets.id))
+        .innerJoin(sources, eq(benchmarkRuns.sourceId, sources.id))
+        .where(eq(benchmarkRuns.benchmarkVersionId, activeBenchmark.id));
+
+      const mapped: ExplorerRun[] = rows.map((r) => ({
+        id: r.run.id,
+        sourceRunId: r.run.sourceRunId,
+        modelId: r.model.id,
+        modelSlug: r.model.slug,
+        modelDisplayName: r.model.displayName,
+        providerName: r.provider.name,
+        harnessId: r.harness.id,
+        harnessName: r.harness.name,
+        harnessVersionId: r.harnessVer.id,
+        harnessVersion: r.harnessVer.version,
+        effortPresetId: r.effort.id,
+        effortPresetSlug: r.effort.slug,
+        sourceId: r.source.id,
+        sourceName: r.source.name,
+        sourceOfficial: Boolean(r.source.official),
+        nSolved: r.run.nSolved,
+        nTotal: r.run.nTotal,
+        solveRate: r.run.solveRate,
+        costUsdReported: r.run.costUsdReported,
+        costUsdNormalized: r.run.costUsdNormalized,
+        costPerTaskReported: r.run.costPerTaskReported,
+        costPerTaskNormalized: r.run.costPerTaskNormalized,
+        cost: r.run.costPerTaskReported,
+        hasTokens: Boolean(r.run.hasTokens),
+        hasCost: Boolean(r.run.hasCost),
+        hasLatency: Boolean(r.run.hasLatency),
+        hasPassAtK: Boolean(r.run.hasPassAtK),
+        hasCi: Boolean(r.run.hasCi),
+        passAtK: r.run.passAtK,
+        latencyP50Seconds: r.run.latencyP50Seconds,
+        tokensIn: r.run.tokensIn,
+        tokensOut: r.run.tokensOut,
+      }));
+
+      const { frontier } = dominate(mapped, {
+        getCost: (p) => p.cost,
+        getSolveRate: (p) => p.solveRate,
+      });
+      const kneePoint = knee(frontier, {
+        getCost: (p) => p.cost,
+        getSolveRate: (p) => p.solveRate,
+      });
+      const frontierIds = new Set(frontier.map((f) => f.id));
+
+      const decorated = mapped.map((run) => ({
+        ...run,
+        isFrontier: frontierIds.has(run.id),
+        isKnee: kneePoint ? run.id === kneePoint.id : false,
+      }));
+
+      const selection = selectCompareRuns(decorated, data.ids ?? [], data.slugs ?? []);
+
+      return {
+        benchmarkOptions,
+        currentBenchmark: activeBenchmark,
+        selected: selection.selected,
+        unknownIds: selection.unknownIds,
+        unknownSlugs: selection.unknownSlugs,
+        truncated: selection.truncated,
+        benchRunCount: decorated.length,
+        error: null,
+      };
+    } catch (err: any) {
+      return {
+        benchmarkOptions: [],
+        currentBenchmark: null,
+        selected: [],
+        unknownIds: [],
+        unknownSlugs: [],
+        truncated: false,
         benchRunCount: 0,
         error: err?.message || "Failed to load catalog data from D1.",
       };

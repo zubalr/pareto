@@ -55,6 +55,64 @@ export interface OpenRouterApiResponse {
   data: OpenRouterModelItem[];
 }
 
+export interface HarborRow {
+  id: string;
+  leaderboard_id: string;
+  rank?: number;
+  metadata?: {
+    date?: string;
+    agent_org?: { url?: string; label?: string };
+    model_org?: { url?: string; label?: string };
+    display_date?: string;
+    agent_display?: { url?: string; label?: string };
+    model_display?: { url?: string; label?: string };
+    reasoning_effort?: string;
+  };
+  metrics?: {
+    accuracy?: number;
+    n_trials?: number;
+    pass_at_2?: number;
+    pass_at_3?: number;
+    pass_at_4?: number;
+    pass_at_5?: number;
+    successes?: number;
+    display_cost?: string;
+    total_tokens?: number;
+    output_tokens?: number;
+    total_cost_usd?: number;
+    display_accuracy?: string;
+    cached_input_tokens?: number;
+    uncached_input_tokens?: number;
+    avg_trial_duration_sec?: number;
+    accuracy_ci95_half_width?: number;
+  };
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SWEBenchResultItem {
+  name: string;
+  folder: string;
+  resolved: number;
+  date?: string;
+  tags?: string[];
+  reasoning_effort?: string | null;
+  site?: string;
+  trajs?: string;
+  oss?: boolean;
+  verified?: boolean;
+}
+
+export interface SWEBenchLeaderboard {
+  name: string;
+  results?: SWEBenchResultItem[];
+}
+
+export interface SWEBenchLeaderboardResponse {
+  leaderboards?: SWEBenchLeaderboard[];
+}
+
 export interface IngestPipelineResult {
   jobId: string;
   status: "completed" | "failed";
@@ -62,6 +120,9 @@ export interface IngestPipelineResult {
   completedAt: string;
   aiderRunsCount: number;
   openRouterSnapshotsCount: number;
+  harborRunsCount: number;
+  swebenchRunsCount: number;
   warmedCacheKeys: string[];
   error?: string;
 }
+

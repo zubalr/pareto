@@ -1,5 +1,7 @@
 import { ingestAiderPolyglot, AIDER_SOURCE_ID } from "./aider";
 import { ingestOpenRouterPricing } from "./openrouter";
+import { ingestHarbor } from "./harbor";
+import { ingestSWEBench } from "./swebench";
 import { warmExplorerCache } from "./warm";
 import type { IngestPipelineResult } from "./types";
 import { env as workersEnv } from "cloudflare:workers";
@@ -49,19 +51,49 @@ export async function runIngestPipeline(options?: RunPipelineOptions): Promise<I
 
   try {
     // 2. Ingest Aider polyglot runs
-    console.log("[Ingest] 1/3 Ingesting Aider polyglot leaderboard...");
-    const aiderResult = await ingestAiderPolyglot({ d1 });
-    console.log(`[Ingest] Successfully ingested/upserted ${aiderResult.runsIngested} Aider runs.`);
+    console.log("[Ingest] 1/5 Ingesting Aider polyglot leaderboard...");
+    let aiderResult: any;
+    try {
+      aiderResult = await ingestAiderPolyglot({ d1 });
+      console.log(`[Ingest] Successfully ingested/upserted ${aiderResult.runsIngested} Aider runs.`);
+    } catch (err: any) {
+      throw new Error(`[Aider Ingest Failed] ${err?.message || err}`);
+    }
 
     // 3. Ingest OpenRouter pricing snapshots
-    console.log("[Ingest] 2/3 Ingesting OpenRouter model pricing snapshots...");
-    const orResult = await ingestOpenRouterPricing({ d1 });
-    console.log(
-      `[Ingest] Successfully snapshotted ${orResult.snapshotsIngested} models (${orResult.matchedModels.join(", ")}).`
-    );
+    console.log("[Ingest] 2/5 Ingesting OpenRouter model pricing snapshots...");
+    let orResult: any;
+    try {
+      orResult = await ingestOpenRouterPricing({ d1 });
+      console.log(
+        `[Ingest] Successfully snapshotted ${orResult.snapshotsIngested} models (${orResult.matchedModels.join(", ")}).`
+      );
+    } catch (err: any) {
+      throw new Error(`[OpenRouter Ingest Failed] ${err?.message || err}`);
+    }
 
-    // 4. Invalidate & warm KV caches
-    console.log("[Ingest] 3/3 Warming default Explorer KV cache slices...");
+    // 4. Ingest Harbor / Terminal-Bench runs
+    console.log("[Ingest] 3/5 Ingesting Harbor / Terminal-Bench leaderboard...");
+    let harborResult: any;
+    try {
+      harborResult = await ingestHarbor({ d1 });
+      console.log(`[Ingest] Successfully ingested/upserted ${harborResult.ingestedCount} Harbor runs.`);
+    } catch (err: any) {
+      throw new Error(`[Harbor Ingest Failed] ${err?.message || err}`);
+    }
+
+    // 5. Ingest SWE-bench Verified runs
+    console.log("[Ingest] 4/5 Ingesting SWE-bench Verified leaderboard...");
+    let sweResult: any;
+    try {
+      sweResult = await ingestSWEBench({ d1 });
+      console.log(`[Ingest] Successfully ingested/upserted ${sweResult.ingestedCount} SWE-bench runs.`);
+    } catch (err: any) {
+      throw new Error(`[SWE-bench Ingest Failed] ${err?.message || err}`);
+    }
+
+    // 6. Invalidate & warm KV caches
+    console.log("[Ingest] 5/5 Warming default Explorer KV cache slices...");
     const warmedKeys = await warmExplorerCache(kv);
     console.log(`[Ingest] Successfully warmed KV keys: ${warmedKeys.join(", ")}`);
 
@@ -69,11 +101,13 @@ export async function runIngestPipeline(options?: RunPipelineOptions): Promise<I
     const summary = {
       aiderRunsIngested: aiderResult.runsIngested,
       openRouterSnapshotsIngested: orResult.snapshotsIngested,
+      harborRunsIngested: harborResult.ingestedCount,
+      swebenchRunsIngested: sweResult.ingestedCount,
       matchedModels: orResult.matchedModels,
       warmedCacheKeys: warmedKeys,
     };
 
-    // 5. Mark job as completed
+    // 7. Mark job as completed
     await d1
       .prepare(
         `UPDATE ingest_jobs
@@ -92,6 +126,8 @@ export async function runIngestPipeline(options?: RunPipelineOptions): Promise<I
       completedAt,
       aiderRunsCount: aiderResult.runsIngested,
       openRouterSnapshotsCount: orResult.snapshotsIngested,
+      harborRunsCount: harborResult.ingestedCount,
+      swebenchRunsCount: sweResult.ingestedCount,
       warmedCacheKeys: warmedKeys,
     };
   } catch (err: any) {

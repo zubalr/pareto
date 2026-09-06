@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { cleanModelName, parseEffort, inferProvider, modelToSlug } from "../src/ingest/aider";
+import { extractHarborRowsFromHtml, parseHarborEffortSlug } from "../src/ingest/harbor";
+import { parseSWEBenchSystem } from "../src/ingest/swebench";
 import yaml from "yaml";
 
 describe("Aider Ingest Transforms", () => {
@@ -54,3 +56,55 @@ describe("Aider Ingest Transforms", () => {
     expect(parsed[0].pass_rate_2).toBe(35.6);
   });
 });
+
+describe("Harbor / Terminal-Bench Ingest Transforms", () => {
+  it("extracts effort correctly for harbor submissions", () => {
+    expect(parseHarborEffortSlug("xhigh")).toBe("xhigh");
+    expect(parseHarborEffortSlug("max")).toBe("max");
+    expect(parseHarborEffortSlug("high")).toBe("high");
+    expect(parseHarborEffortSlug("medium")).toBe("medium");
+    expect(parseHarborEffortSlug("low")).toBe("low");
+    expect(parseHarborEffortSlug(undefined)).toBe("none");
+  });
+
+  it("extracts rows from Next.js RSC flight payload in HTML", () => {
+    const mockHtml = `
+      <!DOCTYPE html><html><body>
+      <script>self.__next_f.push([1,"1:{\\"rows\\":[{\\"id\\":\\"test-row-1\\",\\"metadata\\":{\\"model_display\\":{\\"label\\":\\"GPT-6 Astra\\"},\\"agent_display\\":{\\"label\\":\\"Codex\\"},\\"reasoning_effort\\":\\"max\\"},\\"metrics\\":{\\"accuracy\\":58.18,\\"total_cost_usd\\":3267.18,\\"pass_at_2\\":0.6485,\\"total_tokens\\":1529778322,\\"avg_trial_duration_sec\\":2796.3,\\"accuracy_ci95_half_width\\":2.79}}]}"])</script>
+      </body></html>
+    `;
+    const rows = extractHarborRowsFromHtml(mockHtml);
+    expect(rows.length).toBe(1);
+    expect(rows[0].id).toBe("test-row-1");
+    expect(rows[0].metadata?.model_display?.label).toBe("GPT-6 Astra");
+    expect(rows[0].metrics?.accuracy).toBe(58.18);
+    expect(rows[0].metrics?.total_cost_usd).toBe(3267.18);
+    expect(rows[0].metrics?.pass_at_2).toBe(0.6485);
+  });
+});
+
+describe("SWE-bench Ingest Transforms", () => {
+  it("parses model, harness, and effort from SWE-bench entry tags and name", () => {
+    const item1 = {
+      name: "Sonar Foundation Agent + Claude 4.5 Opus",
+      folder: "20251205_sonar-foundation-agent_claude-opus-4-5",
+      resolved: 79.2,
+      tags: ["Model: claude-opus-4-5", "Org: Sonar"],
+    };
+    const parsed1 = parseSWEBenchSystem(item1);
+    expect(parsed1.modelName).toBe("claude-opus-4-5");
+    expect(parsed1.harnessName).toBe("Sonar Foundation Agent");
+    expect(parsed1.effortSlug).toBe("none");
+
+    const item2 = {
+      name: "SWE-agent + GPT-4o (high)",
+      folder: "20241010_swe-agent_gpt-4o",
+      resolved: 42.0,
+      reasoning_effort: "high",
+    };
+    const parsed2 = parseSWEBenchSystem(item2);
+    expect(parsed2.modelName).toBe("GPT-4o");
+    expect(parsed2.harnessName).toBe("SWE-agent");
+  });
+});
+

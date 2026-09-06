@@ -66,17 +66,20 @@ INSERT OR REPLACE INTO harness_versions (id, harness_id, version) VALUES
 INSERT OR REPLACE INTO benchmarks (id, slug, name, description) VALUES
 ('01J8BENCH0000000000000000TB', 'terminal-bench', 'Terminal-Bench', 'Command-line execution and agentic reasoning suite'),
 ('01J8BENCH0000000000000SWEV', 'swe-bench-verified', 'SWE-bench Verified', 'Real-world software engineering GitHub benchmark'),
-('01J8BENCH000000000000AIDER', 'aider-polyglot', 'Aider Polyglot', 'Aider polyglot coding benchmark (225 tasks across multiple languages)');
+('01J8BENCH000000000000AIDER', 'aider-polyglot', 'Aider Polyglot', 'Aider polyglot coding benchmark (225 tasks across multiple languages)'),
+('01J8BENCH000000000000HARBOR', 'terminal-bench-2', 'Terminal-Bench 2.0', 'Harbor Terminal-Bench leaderboard runs');
 
 -- Benchmark Versions
 INSERT OR REPLACE INTO benchmark_versions (id, benchmark_id, version, n_tasks) VALUES
 ('01J8BV0000000000000000TB40', '01J8BENCH0000000000000000TB', '4.0', 66),
 ('01J8BV000000000000000SWE10', '01J8BENCH0000000000000SWEV', '1.0', 500),
-('01J8BVAIDER00000000000POLY', '01J8BENCH000000000000AIDER', '1.0', 225);
+('01J8BVAIDER00000000000POLY', '01J8BENCH000000000000AIDER', '1.0', 225),
+('01J8BV000000000000000TB20', '01J8BENCH000000000000HARBOR', '2.0', 66);
 
 -- Effort Presets
 INSERT OR REPLACE INTO effort_presets (id, slug, name) VALUES
 ('01J8EFFORT00000000000000MAX', 'max', 'max'),
+('01J8EFFORT000000000000XHIGH', 'xhigh', 'xhigh'),
 ('01J8EFFORT0000000000000HIGH', 'high', 'high'),
 ('01J8EFFORT0000000000000MED', 'medium', 'medium'),
 ('01J8EFFORT00000000000000LOW', 'low', 'low'),
@@ -86,7 +89,9 @@ INSERT OR REPLACE INTO effort_presets (id, slug, name) VALUES
 INSERT OR REPLACE INTO sources (id, slug, name, official, url) VALUES
 ('01J8SOURCE0000000000000SEED', 'seed-compiled', 'Seed Compiled', 0, 'https://github.com/anthropics/evals-fixtures'),
 ('01J8SOURCE000000000000AIDER', 'aider_polyglot', 'Aider Polyglot Leaderboard', 0, 'https://aider.chat/docs/leaderboards/'),
-('01J8SOURCE000000000OPENROUT', 'openrouter', 'OpenRouter Models API', 0, 'https://openrouter.ai/api/v1/models');
+('01J8SOURCE000000000OPENROUT', 'openrouter', 'OpenRouter Models API', 0, 'https://openrouter.ai/api/v1/models'),
+('01J8SOURCE00000000000HARBOR', 'harbor', 'Harbor / Terminal-Bench Leaderboard', 1, 'https://www.tbench.ai/'),
+('01J8SOURCE0000000000000SWE', 'swe_bench_experiments', 'SWE-bench Experiments Leaderboard', 1, 'https://www.swebench.com/');
 
 -- Benchmark Runs: Terminal-Bench 4.0 (66 tasks)
 -- Total USD / 66 = cost per task

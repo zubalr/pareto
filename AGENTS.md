@@ -39,6 +39,20 @@ The solve rate denominator is suite `n_tasks` (total benchmark size), **never** 
 ### D. Benchmark Task Canary
 Terminal-Bench (and SWE-bench) task prompts, statements, test cases, and solutions must **never** be copied into this repository. Only aggregate metrics and metadata are cataloged.
 
+### E. The KV-First Hot Path Rule
+D1 is the durable source of truth, **not** the hot path for page views.
+- Every explorer view checks Workers KV (`FRONTIER`) first via canonical key:
+  `explorer:<benchmarkVersionId>:cb=<costBasis>:m=<sortedModels>:h=<sortedHarnesses>:e=<sortedEfforts>`
+- On KV hit, the payload is returned immediately with `isCachedFrontier: true` (0 D1 reads, <5ms CPU).
+- On KV miss, query D1 with indexed filter `benchmark_version_idx_runs`, calculate metrics, and write to KV with `expirationTtl >= 86400` (24h).
+- Default TB 4.0 key: `explorer:01J8BV0000000000000000TB40:cb=reported:m=:h=:e=`.
+
+### F. Cost Envelope & CPU Cap Invariant
+- App runs within Workers Paid included allotments only (base $5/mo).
+- CPU is capped at `limits.cpu_ms = 2000` in `wrangler.jsonc` to prevent runaway consumption.
+- Client bundles and Apache ECharts chunk are served free via Cloudflare Static Assets.
+- Refer to `COST.md` for the 10% red-line budget and usage tracking runbook.
+
 ---
 
 ## 3. Development & Operations Runbook

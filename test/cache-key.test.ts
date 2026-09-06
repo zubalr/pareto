@@ -1,0 +1,87 @@
+import { describe, it, expect } from "vitest";
+import { buildCanonicalExplorerKey } from "../src/server/keys";
+
+describe("Canonical Explorer Key Generation", () => {
+  it("normalizes empty or undefined params to the default TB 4.0 slice", () => {
+    const key1 = buildCanonicalExplorerKey({});
+    const key2 = buildCanonicalExplorerKey({
+      benchmarkVersionId: undefined,
+      models: [],
+      harnesses: [],
+      efforts: [],
+      costBasis: "reported",
+    });
+    const key3 = buildCanonicalExplorerKey({
+      benchmarkVersionId: "terminal-bench",
+      costBasis: "reported",
+    });
+    const key4 = buildCanonicalExplorerKey({
+      benchmarkVersionId: "01J8BV0000000000000000TB40",
+      costBasis: "reported",
+    });
+
+    expect(key1).toBe("explorer:01J8BV0000000000000000TB40:cb=reported:m=:h=:e=");
+    expect(key2).toBe(key1);
+    expect(key3).toBe(key1);
+    expect(key4).toBe(key1);
+  });
+
+  it("produces deterministic keys regardless of array ordering", () => {
+    const keyOrderA = buildCanonicalExplorerKey({
+      benchmarkVersionId: "01J8BV0000000000000000TB40",
+      models: ["glm-5-3", "claude-opus-5", "gpt-5-6-sol"],
+      harnesses: ["grok-build", "codex"],
+      efforts: ["max", "high"],
+      costBasis: "today",
+    });
+
+    const keyOrderB = buildCanonicalExplorerKey({
+      benchmarkVersionId: "01J8BV0000000000000000TB40",
+      models: ["gpt-5-6-sol", "glm-5-3", "claude-opus-5"],
+      harnesses: ["codex", "grok-build"],
+      efforts: ["high", "max"],
+      costBasis: "today",
+    });
+
+    expect(keyOrderA).toBe(
+      "explorer:01J8BV0000000000000000TB40:cb=today:m=claude-opus-5,glm-5-3,gpt-5-6-sol:h=codex,grok-build:e=high,max"
+    );
+    expect(keyOrderA).toBe(keyOrderB);
+  });
+
+  it("deduplicates array elements and handles empty strings", () => {
+    const key = buildCanonicalExplorerKey({
+      models: ["glm-5-3", "", "glm-5-3", "claude-opus-5"],
+    });
+
+    expect(key).toBe("explorer:01J8BV0000000000000000TB40:cb=reported:m=claude-opus-5,glm-5-3:h=:e=");
+  });
+
+  it("handles alternative benchmark IDs properly", () => {
+    const key = buildCanonicalExplorerKey({
+      benchmarkVersionId: "swe-bench-verified",
+      models: ["claude-opus-5"],
+    });
+
+    expect(key).toBe("explorer:01J8BV000000000000000SWE10:cb=reported:m=claude-opus-5:h=:e=");
+  });
+
+  it("handles aider-polyglot benchmark IDs and slugs properly", () => {
+    const keySlug = buildCanonicalExplorerKey({
+      benchmarkVersionId: "aider-polyglot",
+      costBasis: "reported",
+    });
+    const keyVersion = buildCanonicalExplorerKey({
+      benchmarkVersionId: "aider-polyglot-1.0",
+      costBasis: "reported",
+    });
+    const keyId = buildCanonicalExplorerKey({
+      benchmarkVersionId: "01J8BVAIDER00000000000POLY",
+      costBasis: "reported",
+    });
+
+    expect(keySlug).toBe("explorer:01J8BVAIDER00000000000POLY:cb=reported:m=:h=:e=");
+    expect(keyVersion).toBe(keySlug);
+    expect(keyId).toBe(keySlug);
+  });
+});

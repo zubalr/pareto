@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "deploy": "pnpm run build && wrangler deploy",
     "test": "vitest",
+    "warm": "node scripts/warm-cache.ts",
     "cf-typegen": "wrangler types"
   },
   "devDependencies": {
@@ -39,6 +40,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "tailwind-merge": "^3.6.0",
+    "yaml": "^2.9.0",
     "zod": "^4.5.4"
   }
 }

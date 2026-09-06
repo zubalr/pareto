@@ -23,7 +23,10 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>" }
+      {
+        rel: "icon",
+        href: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%2309090b'/%3E%3Cpolyline points='14,78 38,58 58,50 86,22' fill='none' stroke='%2310b981' stroke-width='10' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='58' cy='50' r='13' fill='%2306b6d4' stroke='%23fff' stroke-width='4'/%3E%3C/svg%3E",
+      },
     ],
   }),
   component: RootComponent,
@@ -44,7 +47,7 @@ function RootComponent() {
               </span>
               <span className="font-bold tracking-wider text-sm">PARETO</span>
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-sans border border-zinc-700">
-                PHASE 1
+                PHASE 1.5
               </span>
             </Link>
 
@@ -57,6 +60,14 @@ function RootComponent() {
                 className="px-2.5 py-1 rounded transition-colors text-xs"
               >
                 Explorer
+              </Link>
+              <Link
+                to="/finder"
+                activeProps={{ className: "bg-zinc-800 text-emerald-400 font-semibold" }}
+                inactiveProps={{ className: "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900" }}
+                className="px-2.5 py-1 rounded transition-colors text-xs"
+              >
+                Finder
               </Link>
               <Link
                 to="/methodology"

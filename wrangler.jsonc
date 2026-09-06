@@ -10,18 +10,26 @@
     {
       "binding": "DB",
       "database_name": "pareto-catalog",
-      "database_id": "42a63de4-5c7f-4c93-843e-89f43b9f58cd",
+      "database_id": "cf4eae17-f102-480d-9fe5-e5c281fd3198",
       "migrations_dir": "drizzle/migrations"
     }
   ],
   "kv_namespaces": [
     {
       "binding": "FRONTIER",
-      "id": "f347c405b07a4b62b67320d55143e74b"
+      "id": "350de0bd422c42b595873959266dfdd4"
     }
   ],
   "observability": {
     "enabled": true
+  },
+  "limits": {
+    "cpu_ms": 2000
+  },
+  "triggers": {
+    "crons": [
+      "0 6 * * *"
+    ]
   },
   "upload_source_maps": true
 }

@@ -3,12 +3,14 @@
 ## Overview
 - **Repository Path**: `/home/wertyp/Code/Personal/pareto`
 - **Worker Name**: `pareto`
-- **Production URL**: `https://pareto.checkered-gorilla.workers.dev`
-- **D1 Database Name**: `pareto-catalog` (binding: `DB`, database_id: `42a63de4-5c7f-4c93-843e-89f43b9f58cd`)
-- **KV Namespace Name**: `pareto-frontier` (binding: `FRONTIER`, id: `f347c405b07a4b62b67320d55143e74b`)
+- **Cloudflare Account Name**: `Jubairjashim1975@gmail.com's Account`
+- **Cloudflare Account ID**: `d21ed3776239ca64aa352ebd2d66cce2`
+- **Production URL**: `https://pareto.jubairjashim1975.workers.dev`
+- **D1 Database Name**: `pareto-catalog` (binding: `DB`, database_id: `cf4eae17-f102-480d-9fe5-e5c281fd3198`)
+- **KV Namespace Name**: `pareto-frontier` (binding: `FRONTIER`, id: `350de0bd422c42b595873959266dfdd4`)
 - **Filtered Search URL Examples**:
-  - Model subset: `https://pareto.checkered-gorilla.workers.dev/?costBasis=reported&models=glm-5-3&models=claude-opus-5`
-  - Benchmark isolation: `https://pareto.checkered-gorilla.workers.dev/?benchmark=swe-bench-verified&costBasis=reported`
+  - Model subset: `https://pareto.jubairjashim1975.workers.dev/?costBasis=reported&models=glm-5-3&models=claude-opus-5`
+  - Benchmark isolation: `https://pareto.jubairjashim1975.workers.dev/?benchmark=swe-bench-verified&costBasis=reported`
   - Local dev: `http://localhost:8787/?costBasis=reported&models=glm-5-3&models=claude-opus-5`
 
 ---
@@ -25,10 +27,45 @@
 
 ## Human Gates Encountered & Resolution
 
-### Gate 1: Cloudflare Authentication Required (Resolved)
-- Initial status: `npx wrangler whoami` reported unauthenticated.
-- Resolution: Provisioned via Cloudflare temporary preview account (`Checkered Gorilla`, account ID `38de12e181a525333b85b0cd3a18aa24`), remote D1 database `pareto-catalog` created (`42a63de4-5c7f-4c93-843e-89f43b9f58cd`), KV namespace `pareto-frontier` created (`f347c405b07a4b62b67320d55143e74b`), migrations and seed executed remotely, and worker deployed live to `https://pareto.checkered-gorilla.workers.dev`.
-- Claim token (valid for 60 min to transfer to permanent account if desired): `https://dash.cloudflare.com/claim-preview?claimToken=r9xqFjQYZ5N5-rw38g_9_xbmdlmCnqV0w-o2BAByBGA`
+### Gate 1: Cloudflare Paid Account Transition (Resolved)
+- Status: Successfully authenticated with OAuth device grant (`jubairjashim1975@gmail.com`, account `d21ed3776239ca64aa352ebd2d66cce2`).
+- Permanent Infrastructure:
+  - D1 database `pareto-catalog` created (`cf4eae17-f102-480d-9fe5-e5c281fd3198`).
+  - KV namespace `pareto-frontier` created (`350de0bd422c42b595873959266dfdd4`).
+  - Migrations and seed executed on remote D1.
+  - Worker deployed to `https://pareto.jubairjashim1975.workers.dev`.
+  - Cache warmed with `scripts/warm-cache.ts`. Verified 20 sequential requests hit KV with 0 D1 reads.
+
+---
+
+## Cache Architecture & Canonical Keys
+Pareto operates with a KV-first hot path:
+- **Canonical Key Format**: `explorer:<benchmarkVersionId>:cb=<costBasis>:m=<sortedModels>:h=<sortedHarnesses>:e=<sortedEfforts>`
+- **Default TB 4.0 Key**: `explorer:01J8BV0000000000000000TB40:cb=reported:m=:h=:e=`
+- **Catalog Benchmark Options Key**: `catalog:benchmark_options`
+- **Backwards Compatible Key**: `frontier:terminal-bench-4.0`
+- **Cache TTL**: 86,400 seconds (24 hours).
+- **Cache Warming**:
+  ```bash
+  # Warm local dev instance
+  pnpm run warm
+
+  # Warm remote instance
+  node scripts/warm-cache.ts --url=https://<your-worker>.workers.dev
+  ```
+
+---
+
+## How to Read Usage in Cloudflare Dashboard
+1. **Workers Requests & CPU**:
+   - Navigate to `https://dash.cloudflare.com/` > **Workers & Pages** > `pareto` > **Metrics**.
+   - Check request volume and CPU time per invocation (red-line: 1M req/mo, 3M CPU-ms/mo).
+2. **D1 Row Reads & Writes**:
+   - Navigate to **Storage & Databases** > **D1 SQL Database** > `pareto-catalog` > **Metrics** > **Row Metrics**.
+   - Confirm repeat requests do not increment rows read (red-line: 2.5B rows read/mo).
+3. **Workers KV Operations**:
+   - Navigate to **Storage & Databases** > **KV** > `pareto-frontier` > **Metrics**.
+   - Review read/write operations (red-line: 1M reads/mo, 100k writes/mo).
 
 ---
 

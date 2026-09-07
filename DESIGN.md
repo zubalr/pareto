@@ -401,3 +401,31 @@ Harbor, Aider, and SWE-bench, README live-board badges, Compare added to home na
 | 55 | GitHub launch render re-check: badges live (see #51), repo About carries the homepage link and topics, `edf8df9` tests-only Actions workflow present and untouched | PASS |
 | 56 | `public/robots.txt` added (allow `/`, no sitemap — no marketing pages to index) | PASS |
 | 57 | Production re-probe after confirm deploy (`29cc4f97`): `/og.png` + `/robots.txt` 200, DeepSWE selector option present, floor finder best fit deepseek-v4-flash, Today payload keeps unrestated runs at `cost:null` (8 null / 74 plotted as Agy's restatement cron covers more rows — no reported fallback), Compare nav present | PASS |
+
+### Phase 8 — first-impression QA (production `46996a19`, 2026-09-07)
+
+Shipped: PHASE badge removed (wordmark "Pareto"), tightened header; type/contrast
+sweep (labels ≥ 11px, body/table ≥ 12px, primary numbers brightened, axis labels
+zinc-400); filter rail rebuilt as search + chip pattern (search box per section,
+selected options as removable emerald chips, `accent-emerald` checkboxes with focus
+rings, taller lists so frontier names are never clipped); `effortMatch=all|max|xhigh`
+search param applied server-side **before** frontier math and included in the KV
+canonical key (`:em=`, keys.ts) so matched boards cache separately; Finder honors the
+same param; few-cost notice on the scatter when < 8 plotted ("the configurations table
+below is the primary view"); benchmark selector labels deduped ("Terminal-Bench 2.0 ·
+66 tasks", "DeepSWE 1.1 · 113 tasks" — no doubled version).
+
+| # | Check (production) | Result |
+|---|---|---|
+| 58 | PHASE 1.5 badge gone from chrome; wordmark "Pareto"; header tightened | PASS |
+| 59 | Type/contrast: rail labels 11px, list rows and table body 12px, primary numbers zinc-100/200, axis labels brightened; checked boxes visibly filled (accent-emerald) with chips for selected options | PASS |
+| 60 | DeepSWE model list: search "astra" narrows to GPT-6 Astra immediately; checking it adds a removable chip and round-trips `models=…` in the URL — no clipping/hunting | PASS |
+| 61 | `effortMatch` round-trip: MAX on DeepSWE → `effortMatch=max` in URL, board narrows (Astra+max → 1 visible), server filter verified in payload (only `max` runs; `xhigh` variant only `xhigh`) | PASS |
+| 62 | KV key: `:em=` added to the canonical key so matched boards cache separately; cache-key tests updated for the new format + distinctness test | PASS |
+| 63 | Effort chart honesty: TB2 renders 1 series because only Astra·Codex has ≥2 effort points in D1 — the chart plots **every** qualifying group (4 series on Aider); single series reflects data, not a plotting bug | PASS (data-dependent) |
+| 64 | Selector labels deduped: "Terminal-Bench 2.0 · 66 tasks", "DeepSWE 1.1 · 113 tasks" — "2.0 2.0" cannot appear | PASS |
+| 65 | SWE-bench Verified: 4/184 plotted → few-cost notice fires naming the table as the primary view; banner keeps "compiled" count | PASS |
+| 66 | Seed/official banners: TB seed still labeled compiled; DeepSWE/TB2 show official-source banner | PASS |
+| 67 | Keyboard: rail search boxes, checkboxes, segmented buttons, and table model links are natively tabbable/Enter-activatable (verified via DOM roles); chart remains the only pointer-affordance and duplicates table data | PASS |
+| 68 | Default slice: `/` still lands on TB 4.0 seed — DeepSWE default switch is Agy's; DeepSWE fully reachable via `?benchmark=01J8BV000000000000DEEPSWE11` (also listed in the selector) | NOTE — needs Agy default |
+| 69 | `pnpm test --run` | PASS (70 tests incl. effortMatch key-distinctness + cheapest-at-floor) |

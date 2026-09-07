@@ -51,7 +51,11 @@ export interface FinderResponse {
 }
 
 export const getFinderData = createServerFn()
-  .validator((input: { benchmarkVersionId?: string; costBasis?: "reported" | "today" }) => input)
+  .validator((input: {
+    benchmarkVersionId?: string;
+    costBasis?: "reported" | "today";
+    effortMatch?: "all" | "max" | "xhigh";
+  }) => input)
   .handler(async ({ data }): Promise<FinderResponse> => {
     try {
       const db = getDb();
@@ -108,7 +112,13 @@ export const getFinderData = createServerFn()
         .where(eq(benchmarkRuns.benchmarkVersionId, activeBenchmark.id));
 
       const basisToday = data.costBasis === "today";
-      const candidates = rows.map((r) => ({
+      const effortMatchSlug =
+        data.effortMatch && data.effortMatch !== "all" ? data.effortMatch : null;
+      const candidates = rows
+        .filter(
+          (r) => effortMatchSlug === null || r.effort.slug === effortMatchSlug
+        )
+        .map((r) => ({
         id: r.run.id,
         sourceRunId: r.run.sourceRunId,
         modelDisplayName: r.model.displayName,

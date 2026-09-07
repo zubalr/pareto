@@ -84,6 +84,8 @@ export interface ExplorerInput {
   harnesses?: string[];
   efforts?: string[];
   costBasis?: "reported" | "today";
+  /** Restrict the whole board to one effort preset (applied before frontier math). */
+  effortMatch?: "all" | "max" | "xhigh";
   forceRefresh?: boolean;
   d1?: any;
 }
@@ -116,14 +118,32 @@ export async function fetchBenchmarkOptions(kv?: any, forceRefresh: boolean = fa
     .from(benchmarkVersions)
     .innerJoin(benchmarks, eq(benchmarkVersions.benchmarkId, benchmarks.id));
 
-  const benchmarkOptions: BenchmarkOption[] = rawBenchmarks.map((b) => ({
-    id: b.benchmarkVersionId,
-    benchmarkSlug: b.benchmarkSlug,
-    benchmarkName: b.benchmarkName,
-    version: b.version,
-    nTasks: b.nTasks,
-    displayLabel: `${b.benchmarkName} ${b.version} (${b.nTasks} tasks)`,
-  }));
+  const benchmarkOptions: BenchmarkOption[] = rawBenchmarks.map((b) => {
+    // Prevent duplicate version string in display label (e.g. "Terminal-Bench 2.0 2.0 (66 tasks)")
+    const name = b.benchmarkName.trim();
+    const version = b.version.trim();
+    const cleanName = name.toLowerCase().endsWith(version.toLowerCase())
+      ? name.slice(0, -version.length).trim()
+      : name;
+    return {
+      id: b.benchmarkVersionId,
+      benchmarkSlug: b.benchmarkSlug,
+      benchmarkName: cleanName,
+      version: b.version,
+      nTasks: b.nTasks,
+      displayLabel: `${cleanName} ${b.version} (${b.nTasks} tasks)`,
+    };
+  });
+
+  // Strict sorting: DeepSWE 1.1 first, SWE-bench Verified 1.0, Aider Polyglot 1.0, Terminal-Bench 2.0, Seed TB 4.0 last
+  const benchmarkOrder: Record<string, number> = {
+    "01J8BV000000000000DEEPSWE11": 1,
+    "01J8BV000000000000000SWE10": 2,
+    "01J8BVAIDER00000000000POLY": 3,
+    "01J8BV000000000000000TB20": 4,
+    "01J8BV0000000000000000TB40": 5,
+  };
+  benchmarkOptions.sort((a, b) => (benchmarkOrder[a.id] ?? 99) - (benchmarkOrder[b.id] ?? 99));
 
   if (activeKv && benchmarkOptions.length > 0) {
     try {
@@ -143,6 +163,8 @@ export async function fetchExplorerData(data: ExplorerInput): Promise<ExplorerRe
   const selectedModelSlugs = data.models?.filter(Boolean) ?? [];
   const selectedHarnessSlugs = data.harnesses?.filter(Boolean) ?? [];
   const selectedEffortSlugs = data.efforts?.filter(Boolean) ?? [];
+  const effortMatchSlug =
+    data.effortMatch && data.effortMatch !== "all" ? data.effortMatch : null;
 
   const kv = getKv();
   const cacheKey = buildCanonicalExplorerKey(data);
@@ -171,10 +193,10 @@ export async function fetchExplorerData(data: ExplorerInput): Promise<ExplorerRe
     // 2. Fetch benchmarks with versions (check KV catalog cache first)
     const benchmarkOptions = await fetchBenchmarkOptions(kv, data.forceRefresh, data.d1);
 
-    // Select requested benchmark or default to Terminal-Bench 4.0
+    // Select requested benchmark or default to DeepSWE 1.1
     const activeBenchmark =
       benchmarkOptions.find((b) => b.id === data.benchmarkVersionId || b.benchmarkSlug === data.benchmarkVersionId) ||
-      benchmarkOptions.find((b) => b.benchmarkSlug === "terminal-bench" && b.version === "4.0") ||
+      benchmarkOptions.find((b) => b.id === "01J8BV000000000000DEEPSWE11" || (b.benchmarkSlug === "deepswe" && b.version === "1.1")) ||
       benchmarkOptions[0] ||
       null;
 
@@ -256,6 +278,11 @@ export async function fetchExplorerData(data: ExplorerInput): Promise<ExplorerRe
         return false;
       }
       if (selectedEffortSlugs.length > 0 && !selectedEffortSlugs.includes(row.effort.slug)) {
+        return false;
+      }
+      // Effort matching is a hard constraint applied before frontier math: runs
+      // without the requested preset are omitted, never faked onto the board.
+      if (effortMatchSlug !== null && row.effort.slug !== effortMatchSlug) {
         return false;
       }
       return true;

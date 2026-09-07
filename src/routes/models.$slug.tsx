@@ -4,6 +4,7 @@ import { z } from "zod";
 import { Pin } from "lucide-react";
 import { getModelData, type ExplorerRun } from "../server/functions";
 import { useEChart } from "../components/ChartSlots";
+import { benchLabel } from "../components/FilterRail";
 import { parsePassAtK } from "../finder";
 
 const searchSchema = z.object({
@@ -37,20 +38,20 @@ function fmtUsd(v: number): string {
 function StatusBadge({ run }: { run: ExplorerRun }) {
   if (run.isKnee) {
     return (
-      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/60 text-cyan-300 font-bold text-[10px] tracking-wide">
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/60 text-cyan-300 font-bold text-[11px] tracking-wide">
         KNEE
       </span>
     );
   }
   if (run.isFrontier) {
     return (
-      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 font-semibold text-[10px] tracking-wide">
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 font-semibold text-[11px] tracking-wide">
         FRONTIER
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800/60 text-zinc-500 text-[10px] tracking-wide">
+    <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800/60 text-zinc-500 text-[11px] tracking-wide">
       DOMINATED
     </span>
   );
@@ -65,7 +66,7 @@ function CoverageChips({ run }: { run: ExplorerRun }) {
     { ok: run.hasCi, label: "CI", title: "Confidence interval reported" },
   ];
   return (
-    <div className="flex items-center gap-1 text-[9px] font-mono">
+    <div className="flex items-center gap-1 text-[11px] font-mono">
       {chips.map((c) => (
         <span
           key={c.label}
@@ -185,7 +186,7 @@ function ModelMovementChart({
         <span className="text-zinc-300 font-semibold uppercase tracking-wider">
           Movement across harnesses / efforts
         </span>
-        <span className="text-[10px] text-zinc-500 font-mono">
+        <span className="text-[11px] text-zinc-500 font-mono">
           {valid.length} plotted · dashed: bench frontier
         </span>
       </div>
@@ -217,7 +218,7 @@ function ModelPage() {
             Compiled/seed numbers — illustrative eval runs, not an official leaderboard.
           </span>
         </div>
-        <div className="hidden md:flex items-center gap-2 text-[10px] text-zinc-500 font-mono">
+        <div className="hidden md:flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
           <span>reported cost basis</span>
           <span>&bull;</span>
           <a href="/methodology" className="underline hover:text-zinc-300">
@@ -230,7 +231,7 @@ function ModelPage() {
         {/* Header */}
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono">
+            <div className="text-[11px] uppercase tracking-wider text-zinc-500 font-mono">
               <Link
                 to="/"
                 search={{ benchmark: benchmarkId || undefined }}
@@ -248,7 +249,7 @@ function ModelPage() {
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-[10px] uppercase tracking-wider text-zinc-500">Benchmark</label>
+            <label className="text-[11px] uppercase tracking-wider text-zinc-500">Benchmark</label>
             <select
               value={benchmarkId}
               onChange={(e) => navigate({ search: { benchmark: e.target.value }, replace: true })}
@@ -257,7 +258,7 @@ function ModelPage() {
             >
               {data.benchmarkOptions.map((b) => (
                 <option key={b.id} value={b.id}>
-                  {b.displayLabel}
+                  {benchLabel(b)}
                 </option>
               ))}
             </select>
@@ -278,35 +279,35 @@ function ModelPage() {
             {/* Stat tiles */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
               <div className="bg-zinc-950 border border-zinc-800/80 rounded px-2.5 py-2">
-                <div className="text-[9px] uppercase text-zinc-500 font-semibold tracking-wider">Runs here</div>
+                <div className="text-[11px] uppercase text-zinc-500 font-semibold tracking-wider">Runs here</div>
                 <div className="text-sm font-bold text-zinc-100 font-mono">{runs.length}</div>
-                <div className="text-[10px] text-zinc-500">of {data.benchRunCount} on the slice</div>
+                <div className="text-[11px] text-zinc-500">of {data.benchRunCount} on the slice</div>
               </div>
               <div className="bg-zinc-950 border border-zinc-800/80 rounded px-2.5 py-2">
-                <div className="text-[9px] uppercase text-zinc-500 font-semibold tracking-wider">Best solve</div>
+                <div className="text-[11px] uppercase text-zinc-500 font-semibold tracking-wider">Best solve</div>
                 <div className="text-sm font-bold text-zinc-100 font-mono">{bestSolve.toFixed(1)}%</div>
-                <div className="text-[10px] text-zinc-500">across harnesses / efforts</div>
+                <div className="text-[11px] text-zinc-500">across harnesses / efforts</div>
               </div>
               <div className="bg-zinc-950 border border-zinc-800/80 rounded px-2.5 py-2">
-                <div className="text-[9px] uppercase text-zinc-500 font-semibold tracking-wider">Cheapest</div>
+                <div className="text-[11px] uppercase text-zinc-500 font-semibold tracking-wider">Cheapest</div>
                 <div className="text-sm font-bold text-zinc-100 font-mono">
                   {cheapest !== null ? `${fmtUsd(cheapest)}/task` : "—"}
                 </div>
-                <div className="text-[10px] text-zinc-500">
+                <div className="text-[11px] text-zinc-500">
                   {cheapest === null ? "no cost telemetry" : "reported basis"}
                 </div>
               </div>
               <div className="bg-zinc-950 border border-zinc-800/80 rounded px-2.5 py-2">
-                <div className="text-[9px] uppercase text-zinc-500 font-semibold tracking-wider">On frontier</div>
+                <div className="text-[11px] uppercase text-zinc-500 font-semibold tracking-wider">On frontier</div>
                 <div className="text-sm font-bold text-zinc-100 font-mono">{frontierCount}</div>
-                <div className="text-[10px] text-zinc-500">undominated configurations</div>
+                <div className="text-[11px] text-zinc-500">undominated configurations</div>
               </div>
             </div>
 
             {withCost.length > 0 ? (
               <ModelMovementChart runs={runs} benchFrontier={data.benchFrontier} />
             ) : (
-              <div className="bg-zinc-950 rounded border border-zinc-800/60 px-3 py-2 text-[10px] text-zinc-500">
+              <div className="bg-zinc-950 rounded border border-zinc-800/60 px-3 py-2 text-[11px] text-zinc-500">
                 No cost telemetry for this model on this benchmark — movement chart suppressed
                 (coverage rule).
               </div>
@@ -334,7 +335,7 @@ function ModelPage() {
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
-                  <thead className="bg-zinc-900 border-b border-zinc-800 text-[10px] uppercase tracking-wider text-zinc-500">
+                  <thead className="bg-zinc-900 border-b border-zinc-800 text-[11px] uppercase tracking-wider text-zinc-500">
                     <tr>
                       <th className="px-3 py-2 font-semibold">Status</th>
                       <th className="px-3 py-2 font-semibold">Harness</th>
@@ -369,18 +370,18 @@ function ModelPage() {
                           </td>
                           <td className="px-3 py-2 text-zinc-200">
                             {r.harnessName}{" "}
-                            <span className="text-zinc-500 text-[10px]">
+                            <span className="text-zinc-500 text-[11px]">
                               {r.harnessVersion !== "default" ? `v${r.harnessVersion}` : ""}
                             </span>
                           </td>
                           <td className="px-3 py-2">
-                            <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 text-[10px] uppercase font-mono">
+                            <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 text-[11px] uppercase font-mono">
                               {r.effortPresetSlug}
                             </span>
                           </td>
                           <td className="px-3 py-2">
                             <span className="font-bold text-zinc-100">{r.solveRate.toFixed(1)}%</span>{" "}
-                            <span className="text-[10px] text-zinc-500 font-mono">
+                            <span className="text-[11px] text-zinc-500 font-mono">
                               {r.nSolved}/{r.nTotal}
                             </span>
                           </td>
@@ -393,7 +394,7 @@ function ModelPage() {
                           <td className="px-3 py-2 text-zinc-400 font-mono">
                             {r.latencyP50Seconds != null ? `${r.latencyP50Seconds.toFixed(1)}s` : "—"}
                           </td>
-                          <td className="px-3 py-2 text-[10px] text-zinc-400 font-mono">
+                          <td className="px-3 py-2 text-[11px] text-zinc-400 font-mono">
                             {passK.length > 0
                               ? passK.map((p) => `k${p.k}:${p.percent}%`).join(" ")
                               : <span className="text-zinc-600">—</span>}
@@ -403,7 +404,7 @@ function ModelPage() {
                           </td>
                           <td className="px-3 py-2">
                             <span
-                              className={`text-[10px] ${r.sourceOfficial ? "text-emerald-500/80" : "text-zinc-500"}`}
+                              className={`text-[11px] ${r.sourceOfficial ? "text-emerald-500/80" : "text-zinc-500"}`}
                               title={r.sourceRunId}
                             >
                               {r.sourceName}
@@ -425,7 +426,7 @@ function ModelPage() {
               </div>
             </div>
 
-            <p className="text-[10px] text-zinc-600">
+            <p className="text-[11px] text-zinc-600">
               Frontier/knee badges are computed against every run on this benchmark slice (reported
               basis), so they match the Explorer board for the same slice. Pinning and filters live
               on the <Link to="/" search={{ benchmark: benchmarkId || undefined }} className="underline hover:text-zinc-400">Explorer</Link>.

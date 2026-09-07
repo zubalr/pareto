@@ -34,20 +34,20 @@ const ROW_BG = {
 function StatusBadge({ run }: { run: ExplorerRun }) {
   if (run.isKnee) {
     return (
-      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/60 text-cyan-300 font-bold text-[10px] tracking-wide">
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/60 text-cyan-300 font-bold text-[11px] tracking-wide">
         KNEE
       </span>
     );
   }
   if (run.isFrontier) {
     return (
-      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 font-semibold text-[10px] tracking-wide">
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 font-semibold text-[11px] tracking-wide">
         FRONTIER
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800/60 text-zinc-500 text-[10px] tracking-wide">
+    <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800/60 text-zinc-500 text-[11px] tracking-wide">
       DOMINATED
     </span>
   );
@@ -62,7 +62,7 @@ function CoverageChips({ run }: { run: ExplorerRun }) {
     { ok: run.hasCi, label: "CI", title: "Confidence interval reported" },
   ];
   return (
-    <div className="flex items-center gap-1 text-[9px] font-mono">
+    <div className="flex items-center gap-1 text-[11px] font-mono">
       {chips.map((c) => (
         <span
           key={c.label}
@@ -127,7 +127,7 @@ export function DataTable({
                   <Pin size={11} className="text-amber-400 shrink-0" aria-label="Pinned" />
                 )}
               </div>
-              <div className="text-[10px] text-zinc-500 flex items-center gap-1.5 flex-wrap">
+              <div className="text-[11px] text-zinc-500 flex items-center gap-1.5 flex-wrap">
                 <span>{run.harnessName}</span>
                 <span className="text-zinc-700">/</span>
                 <span className="px-1 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 uppercase font-mono">
@@ -148,7 +148,7 @@ export function DataTable({
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-zinc-100">{val.toFixed(1)}%</span>
-                <span className="text-[10px] text-zinc-500 font-mono">
+                <span className="text-[11px] text-zinc-500 font-mono">
                   {run.nSolved}/{run.nTotal}
                 </span>
               </div>
@@ -213,7 +213,7 @@ export function DataTable({
           if (val === null || val === undefined) {
             return <span className="text-zinc-600">—</span>;
           }
-          return <span className="text-zinc-400 font-mono">${val.toFixed(0)}</span>;
+          return <span className="text-zinc-200 font-mono">${val.toFixed(0)}</span>;
         },
       }),
 
@@ -230,7 +230,7 @@ export function DataTable({
           const run = info.row.original;
           return (
             <span
-              className={`text-[10px] ${run.sourceOfficial ? "text-emerald-500/80" : "text-zinc-500"}`}
+              className={`text-[11px] ${run.sourceOfficial ? "text-emerald-500/80" : "text-zinc-500"}`}
               title={run.sourceOfficial ? "Official source" : "Compiled / unofficial source"}
             >
               {run.sourceName}
@@ -269,14 +269,14 @@ export function DataTable({
             {data.length} visible · {data.filter((r) => r.isFrontier).length} on frontier
           </span>
         </div>
-        <div className="text-zinc-500 text-[10px]">
+        <div className="text-zinc-500 text-[11px]">
           Hover row to highlight on chart · click row to pin
         </div>
       </div>
 
       <div className="overflow-x-auto max-h-[420px]">
         <table className="w-full text-left border-collapse text-xs">
-          <thead className="bg-zinc-900 sticky top-0 z-10 border-b border-zinc-800 text-[10px] uppercase tracking-wider text-zinc-500">
+          <thead className="bg-zinc-900 sticky top-0 z-10 border-b border-zinc-800 text-[11px] uppercase tracking-wider text-zinc-500">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {

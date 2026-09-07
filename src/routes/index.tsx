@@ -6,7 +6,7 @@ import { getExplorerData } from "../server/functions";
 import { ParetoChart } from "../components/ParetoChart";
 import { PassAtKChart, EffortChart, ResourceChart } from "../components/ChartSlots";
 import { DataTable } from "../components/DataTable";
-import { FilterRail } from "../components/FilterRail";
+import { FilterRail, type EffortMatch, benchLabel } from "../components/FilterRail";
 import { IngestHealthStrip } from "../components/IngestHealthStrip";
 import type { ExplorerRun } from "../server/functions";
 
@@ -18,6 +18,7 @@ const searchSchema = z.object({
   costBasis: z.enum(["reported", "today"]).optional(),
   pinned: z.string().optional(),
   chart: z.enum(["pareto", "passk", "effort", "resources"]).optional(),
+  effortMatch: z.enum(["all", "max", "xhigh"]).optional(),
 });
 
 export type ExplorerSearch = z.infer<typeof searchSchema>;
@@ -47,6 +48,10 @@ export const Route = createFileRoute("/")({
           : search.chart === "pareto"
             ? "pareto"
             : undefined,
+      effortMatch:
+        search.effortMatch === "max" || search.effortMatch === "xhigh"
+          ? search.effortMatch
+          : undefined,
     };
   },
   loaderDeps: ({ search }) => ({ search }),
@@ -58,6 +63,10 @@ export const Route = createFileRoute("/")({
         harnesses: search.harnesses,
         efforts: search.efforts,
         costBasis: search.costBasis ?? "reported",
+        effortMatch:
+          search.effortMatch === "max" || search.effortMatch === "xhigh"
+            ? search.effortMatch
+            : "all",
       },
     });
   },
@@ -73,7 +82,7 @@ function StatTile({
 }) {
   return (
     <div className="bg-zinc-950 border border-zinc-800/80 rounded px-2.5 py-2 flex flex-col justify-between gap-0.5">
-      <span className="text-[9px] uppercase text-zinc-500 font-semibold tracking-wider">
+      <span className="text-[11px] uppercase text-zinc-500 font-semibold tracking-wider">
         {label}
       </span>
       {children}
@@ -89,7 +98,7 @@ function KneeNextStep({ frontier, knee }: { frontier: ExplorerRun[]; knee: Explo
   const idx = sorted.findIndex((r) => r.id === knee.id);
   if (idx < 0 || idx >= sorted.length - 1) {
     return (
-      <span className="text-[10px] text-zinc-500">
+      <span className="text-[11px] text-zinc-500">
         Top of frontier — no cheaper/better step above.
       </span>
     );
@@ -98,7 +107,7 @@ function KneeNextStep({ frontier, knee }: { frontier: ExplorerRun[]; knee: Explo
   const dCost = (next.cost ?? 0) - (knee.cost ?? 0);
   const dSolve = next.solveRate - knee.solveRate;
   return (
-    <span className="text-[10px] text-zinc-400">
+    <span className="text-[11px] text-zinc-400">
       Next frontier step:{" "}
       <span className="text-zinc-200 font-mono">
         +${dCost.toFixed(2)}/task → +{dSolve.toFixed(1)} pts
@@ -283,6 +292,14 @@ function ExplorerPage() {
       benchmark: prev.benchmark,
       costBasis: prev.costBasis,
       pinned: undefined,
+      effortMatch: undefined,
+    }));
+  };
+
+  const handleEffortMatchChange = (m: EffortMatch) => {
+    updateSearch((prev) => ({
+      ...prev,
+      effortMatch: m === "all" ? undefined : m,
     }));
   };
 
@@ -335,7 +352,7 @@ function ExplorerPage() {
             </>
           )}
         </div>
-        <div className="hidden md:flex items-center gap-2 text-[10px] text-zinc-500 font-mono">
+        <div className="hidden md:flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
           {seedRows > 0 && (
             <>
               <span>{seedRows} compiled</span>
@@ -373,6 +390,8 @@ function ExplorerPage() {
           efforts={data.availableEfforts}
           selectedEfforts={selectedEfforts}
           onToggleEffort={handleToggleEffort}
+          effortMatch={(search.effortMatch ?? "all") as EffortMatch}
+          onEffortMatchChange={handleEffortMatchChange}
           costBasis={costBasis}
           onChangeCostBasis={handleChangeCostBasis}
           onResetFilters={handleResetFilters}
@@ -386,7 +405,7 @@ function ExplorerPage() {
               <span className="text-sm font-bold text-zinc-100 truncate">
                 {data.currentBenchmark?.benchmarkName ?? "None"}
               </span>
-              <span className="text-[10px] text-zinc-400 font-mono">
+              <span className="text-[11px] text-zinc-400 font-mono">
                 v{data.currentBenchmark?.version} · {data.currentBenchmark?.nTasks} tasks
               </span>
             </StatTile>
@@ -394,9 +413,9 @@ function ExplorerPage() {
             <StatTile label="Configurations">
               <span className="text-sm font-bold text-zinc-100 font-mono">
                 {data.allRuns.length}
-                <span className="text-[10px] text-zinc-500 font-normal"> visible</span>
+                <span className="text-[11px] text-zinc-500 font-normal"> visible</span>
               </span>
-              <span className="text-[10px] text-zinc-400">
+              <span className="text-[11px] text-zinc-300">
                 {data.frontier.length} on frontier · {plottedRuns.length} plotted
               </span>
             </StatTile>
@@ -405,7 +424,7 @@ function ExplorerPage() {
               <span className="text-sm font-bold text-emerald-400 uppercase tracking-wide">
                 {costBasis}
               </span>
-              <span className="text-[10px] text-zinc-400">
+              <span className="text-[11px] text-zinc-400">
                 $/task = total ÷ {data.currentBenchmark?.nTasks ?? "n_tasks"}
               </span>
             </StatTile>
@@ -417,18 +436,18 @@ function ExplorerPage() {
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1 text-[9px] uppercase text-cyan-400 font-bold tracking-wider">
+                <span className="flex items-center gap-1 text-[11px] uppercase text-cyan-400 font-bold tracking-wider">
                   <Zap size={10} />
                   Efficiency knee
                 </span>
-                <span className="text-[9px] px-1 rounded bg-cyan-900/60 text-cyan-300">
+                <span className="text-[11px] px-1 rounded bg-cyan-900/60 text-cyan-300">
                   best trade-off
                 </span>
               </div>
               {knee ? (
                 <>
                   <span className="text-sm font-bold text-zinc-100 truncate">{knee.modelDisplayName}</span>
-                  <span className="text-[10px] text-cyan-300 font-mono">
+                  <span className="text-[11px] text-cyan-300 font-mono">
                     {knee.harnessName} · {knee.effortPresetSlug} · {knee.solveRate.toFixed(1)}% @ $
                     {(knee.cost ?? 0).toFixed(2)}/task
                   </span>
@@ -471,7 +490,7 @@ function ExplorerPage() {
                   Compare pins ({pinnedIds.length})
                 </Link>
               )}
-              <span className="text-[10px] text-zinc-600 font-mono">
+              <span className="text-[11px] text-zinc-600 font-mono">
                 slot: {chartSlot}
                 {chartSlot !== "pareto" ? ` (?chart=${chartSlot})` : ""}
               </span>

@@ -59,16 +59,13 @@ function RootComponent() {
         <HeadContent />
       </head>
       <body className="min-h-full flex flex-col font-mono text-xs antialiased bg-[#09090b] text-[#f4f4f5]">
-        <header className="border-b border-zinc-800/80 bg-zinc-950/80 sticky top-0 z-40 px-4 py-2.5 flex items-center justify-between backdrop-blur">
+        <header className="border-b border-zinc-800/80 bg-zinc-950/80 sticky top-0 z-40 px-4 py-2 flex items-center justify-between backdrop-blur">
           <div className="flex items-center gap-6">
             <Link to="/" className="flex items-center gap-2 text-zinc-100 hover:text-white group">
               <span className="h-5 w-5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded flex items-center justify-center font-bold text-xs">
                 P
               </span>
-              <span className="font-bold tracking-wider text-sm">PARETO</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-sans border border-zinc-700">
-                PHASE 1.5
-              </span>
+              <span className="font-bold tracking-wider text-sm">Pareto</span>
             </Link>
 
             <nav className="flex items-center gap-1">

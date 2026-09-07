@@ -10,6 +10,7 @@ export const AIDER_HARNESS_ID = "01J8HARNESS00000000000AIDER";
 export const AIDER_DEFAULT_HV_ID = "01J8HV0000000000000AIDER10";
 export const EFFORT_NONE_ID = "01J8EFFORT0000000000000NONE";
 export const EFFORT_MAX_ID = "01J8EFFORT00000000000000MAX";
+export const EFFORT_XHIGH_ID = "01J8EFFORT000000000000XHIGH";
 export const EFFORT_HIGH_ID = "01J8EFFORT0000000000000HIGH";
 export const EFFORT_MED_ID = "01J8EFFORT0000000000000MED";
 export const EFFORT_LOW_ID = "01J8EFFORT00000000000000LOW";
@@ -30,6 +31,105 @@ export const PROVIDER_MAP: Record<string, string> = {
   "01-ai": "01J8PROVIDE0000000000000001AI",
   other: "01J8PROVIDE0000000000000OTHER",
 };
+
+export const KNOWN_MODEL_DISPLAY_NAMES: Record<string, string> = {
+  "claude-fable-5": "Fable 5",
+  "claude-opus-4-8": "Opus 4.8",
+  "claude-opus-5": "Opus 5",
+  "claude-sonnet-4-6": "Claude Sonnet 4.6",
+  "claude-sonnet-5": "Sonnet 5",
+  "deepseek-v4-flash": "DeepSeek V4 Flash",
+  "deepseek-v4-pro": "DeepSeek V4 Pro",
+  "fable-5": "Fable 5",
+  "fable-5-1": "Fable 5.1",
+  "gemini-2-0-flash-exp": "Gemini 2.0 Flash Exp",
+  "gemini-2-0-flash-thinking-exp-01-21": "Gemini 2.0 Flash Thinking Exp (01-21)",
+  "gemini-2-0-pro-exp-02-05": "Gemini 2.0 Pro Exp (02-05)",
+  "gemini-2-5-flash-preview-04-17-default": "Gemini 2.5 Flash Preview 04-17 (default)",
+  "gemini-2-5-flash-preview-05-20-24k-think": "Gemini 2.5 Flash Preview 05-20 (24k think)",
+  "gemini-2-5-flash-preview-05-20-no-think": "Gemini 2.5 Flash Preview 05-20 (no think)",
+  "gemini-2-5-pro-preview-03-25": "Gemini 2.5 Pro Preview 03-25",
+  "gemini-2-5-pro-preview-05-06": "Gemini 2.5 Pro Preview 05-06",
+  "gemini-2-5-pro-preview-06-05-32k-think": "Gemini 2.5 Pro Preview 06-05 (32k think)",
+  "gemini-2-5-pro-preview-06-05-default-think": "Gemini 2.5 Pro Preview 06-05 (default think)",
+  "gemini-3-1-pro-preview": "Gemini 3.1 Pro Preview",
+  "gemini-3-5-flash": "Gemini 3.5 Flash",
+  "gemini-3-6-flash": "Gemini 3.6 Flash",
+  "gemini-3-7-flash": "Gemini 3.7 Flash",
+  "gemini-3-8-flash": "Gemini 3.8 Flash",
+  "gemini-exp-1206": "Gemini Exp 1206",
+  "gemma-3-27b-it": "Gemma 3 27B IT",
+  "glm-5-2": "GLM-5.2",
+  "glm-5-3": "GLM-5.3",
+  "glm-5-3-flash": "GLM-5.3 Flash",
+  "gpt-4-1": "GPT-4.1",
+  "gpt-4-1-mini": "GPT-4.1 Mini",
+  "gpt-4-1-nano": "GPT-4.1 Nano",
+  "gpt-4-5-preview": "GPT-4.5 Preview",
+  "gpt-4o-2024-08-06": "GPT-4o (2024-08-06)",
+  "gpt-4o-2024-11-20": "GPT-4o (2024-11-20)",
+  "gpt-4o-mini-2024-07-18": "GPT-4o mini (2024-07-18)",
+  "gpt-5": "GPT-5",
+  "gpt-5-4": "GPT-5.4",
+  "gpt-5-5": "GPT-5.5",
+  "gpt-5-6-luna": "GPT-5.6 Luna",
+  "gpt-5-6-sol": "GPT-5.6 Sol",
+  "gpt-5-6-terra": "GPT-5.6 Terra",
+  "gpt-6-astra": "GPT-6 Astra",
+  "gpt-oss-120b": "GPT-OSS 120B",
+  "grok-3-beta": "Grok 3 Beta",
+  "grok-3-mini-beta": "Grok 3 Mini Beta",
+  "grok-4": "Grok 4",
+  "grok-4-5": "Grok 4.5",
+  "grok-4-6": "Grok 4.6",
+  "kimi-k2": "Kimi K2",
+  "kimi-k2-7-code": "Kimi K2.7 Code",
+  "kimi-k3": "Kimi K3",
+  "llama-4-maverick": "Llama 4 Maverick",
+  "muse-spark-1-1": "Muse Spark 1.1",
+  "muse-spark-1-2": "Muse Spark 1.2",
+  "o1-2024-12-17": "o1 (2024-12-17)",
+  "o1-mini-2024-09-12": "o1-mini (2024-09-12)",
+  "o3": "o3",
+  "o3-high-gpt-4-1": "o3 (high) + GPT-4.1",
+  "o3-mini": "o3-mini",
+  "o3-pro": "o3-pro",
+  "o4-mini": "o4-mini",
+  "openhands-lm-32b-v0-1": "OpenHands LM 32B v0.1",
+  "optimus-alpha": "Optimus Alpha",
+  "quasar-alpha": "Quasar Alpha",
+  "qwen-max-2025-01-25": "Qwen Max (2025-01-25)",
+  "qwen2-5-coder-32b-instruct": "Qwen 2.5 Coder 32B Instruct",
+  "qwen3-235b-a22b-diff-no-think-alibaba-api": "Qwen3 235B A22B diff (Alibaba API)",
+  "qwen3-32b": "Qwen3 32B",
+  "qwen3-8-max": "Qwen 3.8 Max",
+  "qwq-32b": "QwQ-32B",
+  "qwq-32b-qwen-2-5-coder-instruct": "QwQ-32B + Qwen 2.5 Coder Instruct",
+  "yi-lightning": "Yi-Lightning",
+};
+
+export function humanizeModelDisplayName(slugOrName: string): string {
+  const slug = modelToSlug(slugOrName);
+  if (KNOWN_MODEL_DISPLAY_NAMES[slug]) {
+    return KNOWN_MODEL_DISPLAY_NAMES[slug];
+  }
+  // If already formatted with mixed case or uppercase, keep it clean
+  const trimmed = slugOrName.trim();
+  if (/[A-Z]/.test(trimmed) && !trimmed.includes("-")) {
+    return trimmed;
+  }
+  // Title-case words and keep version numbers
+  return slug
+    .split("-")
+    .map((w) => {
+      if (/^\d+(\.\d+)*$/.test(w)) return w;
+      if (["gpt", "glm", "qwq", "qwen", "oss", "lm", "it", "api"].includes(w.toLowerCase())) {
+        return w.toUpperCase();
+      }
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    })
+    .join(" ");
+}
 
 export function inferProvider(modelName: string): { providerId: string; providerSlug: string } {
   const lower = modelName.toLowerCase();
@@ -64,12 +164,13 @@ export function inferProvider(modelName: string): { providerId: string; provider
 export function parseEffort(item: AiderPolyglotYamlItem): { effortPresetId: string; effortSlug: string } {
   let effort = item.reasoning_effort?.toLowerCase().trim();
   if (!effort) {
-    const match = item.model.match(/\((high|medium|low|max)\)/i);
+    const match = item.model.match(/\((xhigh|extra-high|extra_high|high|medium|low|max)\)/i);
     if (match) {
       effort = match[1].toLowerCase();
     }
   }
 
+  if (effort === "xhigh" || effort === "extra-high" || effort === "extra_high") return { effortPresetId: EFFORT_XHIGH_ID, effortSlug: "xhigh" };
   if (effort === "high") return { effortPresetId: EFFORT_HIGH_ID, effortSlug: "high" };
   if (effort === "medium" || effort === "med") return { effortPresetId: EFFORT_MED_ID, effortSlug: "medium" };
   if (effort === "low") return { effortPresetId: EFFORT_LOW_ID, effortSlug: "low" };
@@ -78,8 +179,8 @@ export function parseEffort(item: AiderPolyglotYamlItem): { effortPresetId: stri
 }
 
 export function cleanModelName(rawModel: string): string {
-  // Strip trailing (high), (medium), (low), (max)
-  return rawModel.replace(/\s*\((high|medium|low|max)\)\s*$/i, "").trim();
+  // Strip trailing (high), (medium), (low), (max), (xhigh)
+  return rawModel.replace(/\s*\((xhigh|extra-high|extra_high|high|medium|low|max)\)\s*$/i, "").trim();
 }
 
 export function modelToSlug(name: string): string {

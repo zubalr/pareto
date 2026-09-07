@@ -12,6 +12,7 @@ const searchSchema = z.object({
   minSolve: z.string().optional(),
   objective: z.enum(["max-solve", "min-cost-per-resolved", "cheapest-at-floor"]).optional(),
   costBasis: z.enum(["reported", "today"]).optional(),
+  effortMatch: z.enum(["all", "max", "xhigh"]).optional(),
 });
 
 export type FinderSearch = z.infer<typeof searchSchema>;
@@ -36,14 +37,26 @@ export const Route = createFileRoute("/finder")({
               ? "max-solve"
               : undefined,
       costBasis: search.costBasis === "today" ? "today" : "reported",
+      effortMatch:
+        search.effortMatch === "max" || search.effortMatch === "xhigh"
+          ? search.effortMatch
+          : undefined,
     };
   },
-  loaderDeps: ({ search }) => ({ benchmark: search.benchmark, costBasis: search.costBasis }),
+  loaderDeps: ({ search }) => ({
+    benchmark: search.benchmark,
+    costBasis: search.costBasis,
+    effortMatch: search.effortMatch,
+  }),
   loader: async ({ deps }) => {
     return await getFinderData({
       data: {
         benchmarkVersionId: deps.benchmark,
         costBasis: deps.costBasis === "today" ? "today" : "reported",
+        effortMatch:
+          deps.effortMatch === "max" || deps.effortMatch === "xhigh"
+            ? deps.effortMatch
+            : "all",
       },
     });
   },
@@ -89,13 +102,13 @@ function ConfigCard({
     <div className={`bg-zinc-950 border ${border} rounded p-3 flex flex-col gap-1.5`}>
       <div className="flex items-center justify-between">
         <span
-          className={`text-[9px] uppercase font-bold tracking-wider ${
+          className={`text-[11px] uppercase font-bold tracking-wider ${
             tone === "best" ? "text-cyan-400" : "text-zinc-500"
           }`}
         >
           {rank}
         </span>
-        <span className="text-[9px] font-mono text-zinc-600">{run.sourceRunId}</span>
+        <span className="text-[11px] font-mono text-zinc-600">{run.sourceRunId}</span>
       </div>
       <div className="flex items-baseline justify-between gap-2">
         <Link
@@ -109,10 +122,10 @@ function ConfigCard({
           {run.solveRate.toFixed(1)}%
         </span>
       </div>
-      <div className="text-[10px] text-zinc-400 font-mono">
+      <div className="text-[11px] text-zinc-400 font-mono">
         {run.harnessName} · {run.effortPresetSlug}
       </div>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[10px] text-zinc-400 border-t border-zinc-800/80 pt-1.5 mt-0.5">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[11px] text-zinc-400 border-t border-zinc-800/80 pt-1.5 mt-0.5">
         <span>
           $/task <span className="text-zinc-100 font-mono">{run.cost !== null ? fmtUsd(run.cost) : "—"}</span>
         </span>
@@ -127,7 +140,7 @@ function ConfigCard({
           p50 <span className="text-zinc-100 font-mono">{run.latencyP50Seconds != null ? `${run.latencyP50Seconds.toFixed(1)}s` : "—"}</span>
         </span>
       </div>
-      <div className="text-[9px] text-zinc-500 flex items-center justify-between">
+      <div className="text-[11px] text-zinc-500 flex items-center justify-between">
         <span>
           source: {run.sourceName}
           {run.sourceOfficial ? " (official)" : " (compiled)"} · n={run.nSolved} resolved
@@ -156,6 +169,7 @@ function FinderPage() {
   const minSolve = search.minSolve ?? "";
   const objective: FinderObjective = search.objective ?? "max-solve";
   const costBasis = search.costBasis ?? "reported";
+  const effortMatch = search.effortMatch ?? "all";
 
   const updateSearch = (patch: Partial<FinderSearch>) => {
     navigate({ search: (prev: FinderSearch) => ({ ...prev, ...patch }), replace: true });
@@ -194,7 +208,7 @@ function FinderPage() {
             ranking.
           </span>
         </div>
-        <div className="hidden md:flex items-center gap-2 text-[10px] text-zinc-500 font-mono">
+        <div className="hidden md:flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
           <span>{costBasis === "today" ? "today basis — runs without restated pricing excluded" : "reported cost basis"}</span>
           <span>&bull;</span>
           <a href="/methodology" className="underline hover:text-zinc-300">
@@ -207,7 +221,7 @@ function FinderPage() {
         {/* Input rail */}
         <aside className="w-full lg:w-60 bg-zinc-950 border-b lg:border-b-0 lg:border-r border-zinc-800/80 p-3.5 flex flex-col gap-5 text-xs shrink-0 overflow-y-auto">
           <div className="flex flex-col gap-1.5">
-            <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+            <label className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
               <CircleDollarSign size={12} className="text-zinc-500" />
               Benchmark
             </label>
@@ -226,7 +240,7 @@ function FinderPage() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+            <label className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
               <Target size={12} className="text-zinc-500" />
               Max $ / task
             </label>
@@ -245,7 +259,7 @@ function FinderPage() {
                   key={preset}
                   type="button"
                   onClick={() => updateSearch({ maxCost: preset })}
-                  className={`py-0.5 rounded border text-[10px] font-mono transition-colors ${
+                  className={`py-0.5 rounded border text-[11px] font-mono transition-colors ${
                     maxCost === preset
                       ? "border-emerald-500/60 text-emerald-400 bg-zinc-800"
                       : "border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600"
@@ -258,7 +272,7 @@ function FinderPage() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+            <label className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
               <Timer size={12} className="text-zinc-500" />
               Max p50 latency (s)
             </label>
@@ -272,14 +286,42 @@ function FinderPage() {
               aria-label="Maximum p50 latency in seconds, optional"
               className="w-full bg-zinc-900 border border-zinc-700/80 text-zinc-100 rounded px-2 py-1.5 text-xs focus:outline-none focus:border-emerald-500 font-mono placeholder:text-zinc-600"
             />
-            <p className="text-[9px] text-zinc-500 leading-snug">
+            <p className="text-[11px] text-zinc-500 leading-snug">
               Runs without measured latency are excluded while a cap is set — unmeasured is not
               "within budget".
             </p>
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+              Match effort
+            </label>
+            <div className="grid grid-cols-3 p-0.5 bg-zinc-900 rounded border border-zinc-800">
+              {(["all", "max", "xhigh"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => updateSearch({ effortMatch: m === "all" ? undefined : m })}
+                  aria-pressed={effortMatch === m}
+                  className={`px-1 py-1 text-xs rounded transition-colors uppercase font-mono ${
+                    effortMatch === m
+                      ? "bg-zinc-800 text-emerald-400 font-semibold"
+                      : "text-zinc-300 hover:text-zinc-100"
+                  }`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-zinc-500 leading-snug">
+              {effortMatch === "all"
+                ? "All effort presets included."
+                : `Only ${effortMatch}-effort runs are ranked.`}
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
               Objective
             </label>
             <div className="flex flex-col gap-0.5">
@@ -307,7 +349,7 @@ function FinderPage() {
             </div>
             {objective === "cheapest-at-floor" && (
               <div className="flex flex-col gap-1 mt-1">
-                <label className="text-[10px] text-zinc-400" htmlFor="min-solve">
+                <label className="text-[11px] text-zinc-400" htmlFor="min-solve">
                   Min solve floor (%)
                 </label>
                 <input
@@ -322,19 +364,19 @@ function FinderPage() {
                   aria-label="Minimum solve rate percent for cheapest-at-floor"
                   className="w-full bg-zinc-900 border border-zinc-700/80 text-zinc-100 rounded px-2 py-1 text-xs focus:outline-none focus:border-emerald-500 font-mono placeholder:text-zinc-600"
                 />
-                <p className="text-[9px] text-zinc-500 leading-snug">
+                <p className="text-[11px] text-zinc-500 leading-snug">
                   Cheapest run whose solve rate ≥ floor. Runs below the floor are excluded, not
                   silently accepted.
                 </p>
               </div>
             )}
-            <p className="text-[9px] text-zinc-500 leading-snug">
+            <p className="text-[11px] text-zinc-500 leading-snug">
               $/resolved = total run cost ÷ resolved tasks. It hides failures — read it next to
               solve rate.
             </p>
           </div>
 
-          <p className="text-[9px] text-zinc-600 leading-snug mt-auto">
+          <p className="text-[11px] text-zinc-600 leading-snug mt-auto">
             Eligibility requires reported cost ≤ cap. Runs without cost telemetry are never assumed
             within budget.
           </p>
@@ -405,13 +447,13 @@ function FinderPage() {
                   <span className="font-semibold uppercase tracking-wider text-zinc-400">
                     Excluded · {result.excluded.length} of {data.candidates.length} runs
                   </span>
-                  <span className="text-zinc-500 text-[10px] font-mono">
+                  <span className="text-zinc-500 text-[11px] font-mono">
                     {result.eligible.length} eligible · best of {result.eligible.length} shown
                   </span>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
-                    <thead className="bg-zinc-900/90 border-b border-zinc-800 text-[10px] uppercase tracking-wider text-zinc-500">
+                    <thead className="bg-zinc-900/90 border-b border-zinc-800 text-[11px] uppercase tracking-wider text-zinc-500">
                       <tr>
                         <th className="px-3 py-1.5 font-semibold">Run</th>
                         <th className="px-3 py-1.5 font-semibold">Config</th>
@@ -423,13 +465,13 @@ function FinderPage() {
                       {result.excluded.map((e) => (
                         <tr key={e.run.id} className="bg-zinc-950">
                           <td className="px-3 py-1.5 text-zinc-300">{e.run.modelDisplayName}</td>
-                          <td className="px-3 py-1.5 text-zinc-500 text-[10px] font-mono">
+                          <td className="px-3 py-1.5 text-zinc-500 text-[11px] font-mono">
                             {e.run.harnessName} · {e.run.effortPresetSlug}
                           </td>
                           <td className="px-3 py-1.5 text-zinc-400 font-mono">
                             {e.run.cost !== null ? fmtUsd(e.run.cost) : "—"}
                           </td>
-                          <td className="px-3 py-1.5 text-[10px]">
+                          <td className="px-3 py-1.5 text-[11px]">
                             <span
                               className={`px-1.5 py-0.5 rounded border font-mono ${
                                 e.reason === "over-budget"
@@ -457,7 +499,7 @@ function FinderPage() {
               </div>
 
               {(noCost.length > 0 || latencyExcluded.length > 0) && (
-                <p className="text-[10px] text-zinc-500">
+                <p className="text-[11px] text-zinc-500">
                   Coverage note: {noCost.length} run(s) lack cost telemetry and {latencyExcluded.length}{" "}
                   fail the latency constraint — they are excluded, never coerced into budget.
                 </p>

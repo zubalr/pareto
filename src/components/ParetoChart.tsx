@@ -122,7 +122,7 @@ export function ParetoChart({
               left: "center",
               top: "middle",
               textStyle: { color: "#71717a", fontSize: 12, fontFamily: "monospace" },
-              subtextStyle: { color: "#52525b", fontSize: 10, fontFamily: "monospace" },
+              subtextStyle: { color: "#52525b", fontSize: 11, fontFamily: "monospace" },
             },
             xAxis: { show: false },
             yAxis: { show: false },
@@ -239,7 +239,7 @@ export function ParetoChart({
                   },
                   sub: {
                     color: "#a5f3fc",
-                    fontSize: 10,
+                    fontSize: 11,
                     fontFamily: "monospace",
                     backgroundColor: "#083344",
                     padding: [2, 6, 4, 6],
@@ -321,11 +321,11 @@ export function ParetoChart({
           name: "USD per task (log)",
           nameLocation: "middle",
           nameGap: 30,
-          nameTextStyle: { color: COLOR.axisName, fontSize: 10, fontFamily: "monospace" },
+          nameTextStyle: { color: COLOR.axisName, fontSize: 11, fontFamily: "monospace" },
           axisLabel: {
-            color: COLOR.label,
+            color: COLOR.axisName,
             fontFamily: "monospace",
-            fontSize: 10,
+            fontSize: 11,
             formatter: (v: number) => fmtUsd(v),
           },
           splitLine: { lineStyle: { color: COLOR.grid, type: "dashed" } },
@@ -338,11 +338,11 @@ export function ParetoChart({
           name: "Solve rate (%)",
           nameLocation: "middle",
           nameGap: 40,
-          nameTextStyle: { color: COLOR.axisName, fontSize: 10, fontFamily: "monospace" },
+          nameTextStyle: { color: COLOR.axisName, fontSize: 11, fontFamily: "monospace" },
           axisLabel: {
-            color: COLOR.label,
+            color: COLOR.axisName,
             fontFamily: "monospace",
-            fontSize: 10,
+            fontSize: 11,
             formatter: (v: number) => `${v}%`,
           },
           splitLine: { lineStyle: { color: COLOR.grid, type: "dashed" } },
@@ -438,15 +438,23 @@ export function ParetoChart({
           )}
         </div>
 
-        <div className="text-[10px] text-zinc-500 font-mono">
+        <div className="text-[11px] text-zinc-500 font-mono">
           {validRuns.length}/{runs.length} plotted · x: USD/task log · y: solve %
         </div>
       </div>
 
+      {!emptyMessage && validRuns.length < 8 && (
+        <div className="mx-2 mt-2 rounded border border-amber-500/30 bg-amber-950/20 px-3 py-1.5 text-[11px] text-amber-200/90">
+          Only {validRuns.length} of {runs.length} runs on this slice report cost — the
+          configurations table below is the primary view here; the scatter draws the
+          cost-bearing subset only.
+        </div>
+      )}
+
       {emptyMessage ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center px-6">
           <span className="text-zinc-400 text-xs font-mono">{emptyMessage}</span>
-          <span className="text-zinc-600 text-[10px]">
+          <span className="text-zinc-600 text-[11px]">
             Coverage rule: runs without cost telemetry are excluded from the frontier and never
             drawn at $0.
           </span>

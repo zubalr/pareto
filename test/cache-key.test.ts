@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { buildCanonicalExplorerKey } from "../src/server/keys";
 
 describe("Canonical Explorer Key Generation", () => {
-  it("normalizes empty or undefined params to the default TB 4.0 slice", () => {
+  it("normalizes empty or undefined params to the default DeepSWE 1.1 slice", () => {
     const key1 = buildCanonicalExplorerKey({});
     const key2 = buildCanonicalExplorerKey({
       benchmarkVersionId: undefined,
@@ -11,6 +11,12 @@ describe("Canonical Explorer Key Generation", () => {
       efforts: [],
       costBasis: "reported",
     });
+
+    expect(key1).toBe("explorer:01J8BV000000000000DEEPSWE11:cb=reported:m=:h=:e=:em=all");
+    expect(key2).toBe(key1);
+  });
+
+  it("normalizes explicit terminal-bench params to TB 4.0 slice", () => {
     const key3 = buildCanonicalExplorerKey({
       benchmarkVersionId: "terminal-bench",
       costBasis: "reported",
@@ -20,10 +26,8 @@ describe("Canonical Explorer Key Generation", () => {
       costBasis: "reported",
     });
 
-    expect(key1).toBe("explorer:01J8BV0000000000000000TB40:cb=reported:m=:h=:e=");
-    expect(key2).toBe(key1);
-    expect(key3).toBe(key1);
-    expect(key4).toBe(key1);
+    expect(key3).toBe("explorer:01J8BV0000000000000000TB40:cb=reported:m=:h=:e=:em=all");
+    expect(key4).toBe(key3);
   });
 
   it("produces deterministic keys regardless of array ordering", () => {
@@ -44,7 +48,7 @@ describe("Canonical Explorer Key Generation", () => {
     });
 
     expect(keyOrderA).toBe(
-      "explorer:01J8BV0000000000000000TB40:cb=today:m=claude-opus-5,glm-5-3,gpt-5-6-sol:h=codex,grok-build:e=high,max"
+      "explorer:01J8BV0000000000000000TB40:cb=today:m=claude-opus-5,glm-5-3,gpt-5-6-sol:h=codex,grok-build:e=high,max:em=all"
     );
     expect(keyOrderA).toBe(keyOrderB);
   });
@@ -54,7 +58,17 @@ describe("Canonical Explorer Key Generation", () => {
       models: ["glm-5-3", "", "glm-5-3", "claude-opus-5"],
     });
 
-    expect(key).toBe("explorer:01J8BV0000000000000000TB40:cb=reported:m=claude-opus-5,glm-5-3:h=:e=");
+    expect(key).toBe("explorer:01J8BV000000000000DEEPSWE11:cb=reported:m=claude-opus-5,glm-5-3:h=:e=:em=all");
+  });
+
+  it("preserves xhigh effort preset distinctly in canonical key", () => {
+    const key = buildCanonicalExplorerKey({
+      benchmarkVersionId: "01J8BV000000000000DEEPSWE11",
+      models: ["gpt-6-astra"],
+      efforts: ["xhigh"],
+      costBasis: "reported",
+    });
+    expect(key).toBe("explorer:01J8BV000000000000DEEPSWE11:cb=reported:m=gpt-6-astra:h=:e=xhigh:em=all");
   });
 
   it("handles alternative benchmark IDs properly", () => {
@@ -63,7 +77,7 @@ describe("Canonical Explorer Key Generation", () => {
       models: ["claude-opus-5"],
     });
 
-    expect(key).toBe("explorer:01J8BV000000000000000SWE10:cb=reported:m=claude-opus-5:h=:e=");
+    expect(key).toBe("explorer:01J8BV000000000000000SWE10:cb=reported:m=claude-opus-5:h=:e=:em=all");
   });
 
   it("handles aider-polyglot benchmark IDs and slugs properly", () => {
@@ -80,7 +94,7 @@ describe("Canonical Explorer Key Generation", () => {
       costBasis: "reported",
     });
 
-    expect(keySlug).toBe("explorer:01J8BVAIDER00000000000POLY:cb=reported:m=:h=:e=");
+    expect(keySlug).toBe("explorer:01J8BVAIDER00000000000POLY:cb=reported:m=:h=:e=:em=all");
     expect(keyVersion).toBe(keySlug);
     expect(keyId).toBe(keySlug);
   });
@@ -99,7 +113,7 @@ describe("Canonical Explorer Key Generation", () => {
       costBasis: "reported",
     });
 
-    expect(keySlug).toBe("explorer:01J8BV000000000000000TB20:cb=reported:m=:h=:e=");
+    expect(keySlug).toBe("explorer:01J8BV000000000000000TB20:cb=reported:m=:h=:e=:em=all");
     expect(keyVersion).toBe(keySlug);
     expect(keyId).toBe(keySlug);
   });
@@ -118,8 +132,20 @@ describe("Canonical Explorer Key Generation", () => {
       costBasis: "today",
     });
 
-    expect(keySlug).toBe("explorer:01J8BV000000000000DEEPSWE11:cb=today:m=:h=:e=");
+    expect(keySlug).toBe("explorer:01J8BV000000000000DEEPSWE11:cb=today:m=:h=:e=:em=all");
     expect(keyVersion).toBe(keySlug);
     expect(keyId).toBe(keySlug);
+  });
+});
+
+describe("effortMatch in the canonical key", () => {
+  it("max and xhigh produce distinct keys, distinct from all", () => {
+    const all = buildCanonicalExplorerKey({ effortMatch: "all" });
+    const max = buildCanonicalExplorerKey({ effortMatch: "max" });
+    const xhigh = buildCanonicalExplorerKey({ effortMatch: "xhigh" });
+    expect(max).not.toBe(all);
+    expect(xhigh).not.toBe(all);
+    expect(max).not.toBe(xhigh);
+    expect(max).toContain(":em=max");
   });
 });

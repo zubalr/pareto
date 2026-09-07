@@ -1,11 +1,11 @@
 import { fetchExplorerData, fetchBenchmarkOptions, buildCanonicalExplorerKey } from "../server/explorer-service";
 
 export const WARM_BENCHMARK_VERSION_IDS = [
-  "01J8BV0000000000000000TB40",
+  "01J8BV000000000000DEEPSWE11",
+  "01J8BV000000000000000SWE10",
   "01J8BVAIDER00000000000POLY",
   "01J8BV000000000000000TB20",
-  "01J8BV000000000000000SWE10",
-  "01J8BV000000000000DEEPSWE11",
+  "01J8BV0000000000000000TB40",
 ];
 
 const COST_BASES: Array<"reported" | "today"> = ["reported", "today"];

@@ -8,7 +8,7 @@
  */
 
 import type { DeepSWERow, DeepSWELeaderboardResponse } from "./types";
-import { inferProvider, modelToSlug } from "./aider";
+import { inferProvider, modelToSlug, humanizeModelDisplayName } from "./aider";
 
 export const DEEPSWE_LEADERBOARD_URL =
   "https://deepswe.datacurve.ai/artifacts/v1.1/leaderboard-live.json";
@@ -223,9 +223,11 @@ export async function ingestDeepSWE({
 
     if (modelMap.has(lowerCleaned)) return modelMap.get(lowerCleaned)!;
     if (modelMap.has(slug)) return modelMap.get(slug)!;
+    if (slug === "claude-fable-5" && modelMap.has("fable-5")) return modelMap.get("fable-5")!;
 
     const newId = generateDeterministicId("01J8MODEL", slug);
     const { providerId } = inferProvider(cleaned);
+    const humanName = humanizeModelDisplayName(cleaned);
     const now = new Date().toISOString();
 
     prepStatements.push(
@@ -233,7 +235,7 @@ export async function ingestDeepSWE({
         .prepare(
           "INSERT OR IGNORE INTO models (id, provider_id, slug, display_name, created_at) VALUES (?, ?, ?, ?, ?)"
         )
-        .bind(newId, providerId, slug, cleaned, now)
+        .bind(newId, providerId, slug, humanName, now)
     );
     prepStatements.push(
       d1

@@ -13,7 +13,7 @@ export function SlotEmpty({ title, message }: { title: string; message: string }
       <SlotHeader title={title} note="coverage" />
       <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center px-6">
         <span className="text-zinc-400 text-xs font-mono">{message}</span>
-        <span className="text-zinc-600 text-[10px]">
+        <span className="text-zinc-600 text-[11px]">
           Coverage rule: a slot without telemetry stays empty — missing data is never plotted as a
           value.
         </span>
@@ -26,7 +26,7 @@ function SlotHeader({ title, note }: { title: string; note: string }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-2 pt-1 pb-2 border-b border-zinc-800/40 text-[11px]">
       <span className="text-zinc-300 font-semibold uppercase tracking-wider">{title}</span>
-      <span className="text-[10px] text-zinc-500 font-mono">{note}</span>
+      <span className="text-[11px] text-zinc-500 font-mono">{note}</span>
     </div>
   );
 }
@@ -131,7 +131,7 @@ export function PassAtKChart({ runs }: { runs: ExplorerRun[] }) {
         legend: {
           bottom: 0,
           left: "center",
-          textStyle: { color: "#a1a1aa", fontSize: 10, fontFamily: "monospace" },
+          textStyle: { color: "#a1a1aa", fontSize: 11, fontFamily: "monospace" },
           itemWidth: 14,
           itemHeight: 8,
         },
@@ -164,9 +164,9 @@ export function PassAtKChart({ runs }: { runs: ExplorerRun[] }) {
           name: "k (attempts)",
           nameLocation: "middle",
           nameGap: 28,
-          nameTextStyle: { color: "#a1a1aa", fontSize: 10, fontFamily: "monospace" },
+          nameTextStyle: { color: "#a1a1aa", fontSize: 11, fontFamily: "monospace" },
           data: kValues.map((k) => String(k)),
-          axisLabel: { color: "#71717a", fontFamily: "monospace", fontSize: 10 },
+          axisLabel: { color: "#a1a1aa", fontFamily: "monospace", fontSize: 11 },
           splitLine: { show: false },
           axisLine: { lineStyle: { color: "#27272a" } },
         },
@@ -177,8 +177,8 @@ export function PassAtKChart({ runs }: { runs: ExplorerRun[] }) {
           name: "Cumulative solve (%)",
           nameLocation: "middle",
           nameGap: 42,
-          nameTextStyle: { color: "#a1a1aa", fontSize: 10, fontFamily: "monospace" },
-          axisLabel: { color: "#71717a", fontFamily: "monospace", fontSize: 10, formatter: (v: number) => `${v}%` },
+          nameTextStyle: { color: "#a1a1aa", fontSize: 11, fontFamily: "monospace" },
+          axisLabel: { color: "#a1a1aa", fontFamily: "monospace", fontSize: 11, formatter: (v: number) => `${v}%` },
           splitLine: { lineStyle: { color: "#18181b", type: "dashed" } },
           axisLine: { lineStyle: { color: "#27272a" } },
         },
@@ -256,7 +256,7 @@ export function EffortChart({ runs }: { runs: ExplorerRun[] }) {
         legend: {
           bottom: 0,
           left: "center",
-          textStyle: { color: "#a1a1aa", fontSize: 10, fontFamily: "monospace" },
+          textStyle: { color: "#a1a1aa", fontSize: 11, fontFamily: "monospace" },
           itemWidth: 14,
           itemHeight: 8,
         },
@@ -289,9 +289,9 @@ export function EffortChart({ runs }: { runs: ExplorerRun[] }) {
           name: "Effort preset",
           nameLocation: "middle",
           nameGap: 28,
-          nameTextStyle: { color: "#a1a1aa", fontSize: 10, fontFamily: "monospace" },
+          nameTextStyle: { color: "#a1a1aa", fontSize: 11, fontFamily: "monospace" },
           data: effortAxis,
-          axisLabel: { color: "#71717a", fontFamily: "monospace", fontSize: 10, uppercase: true },
+          axisLabel: { color: "#a1a1aa", fontFamily: "monospace", fontSize: 11, uppercase: true },
           axisLine: { lineStyle: { color: "#27272a" } },
         },
         yAxis: {
@@ -300,8 +300,8 @@ export function EffortChart({ runs }: { runs: ExplorerRun[] }) {
           name: "Solve rate (%)",
           nameLocation: "middle",
           nameGap: 42,
-          nameTextStyle: { color: "#a1a1aa", fontSize: 10, fontFamily: "monospace" },
-          axisLabel: { color: "#71717a", fontFamily: "monospace", fontSize: 10, formatter: (v: number) => `${v}%` },
+          nameTextStyle: { color: "#a1a1aa", fontSize: 11, fontFamily: "monospace" },
+          axisLabel: { color: "#a1a1aa", fontFamily: "monospace", fontSize: 11, formatter: (v: number) => `${v}%` },
           splitLine: { lineStyle: { color: "#18181b", type: "dashed" } },
           axisLine: { lineStyle: { color: "#27272a" } },
         },
@@ -379,7 +379,7 @@ export function ResourceChart({ runs }: { runs: ExplorerRun[] }) {
         legend: {
           bottom: 0,
           left: "center",
-          textStyle: { color: "#a1a1aa", fontSize: 10, fontFamily: "monospace" },
+          textStyle: { color: "#a1a1aa", fontSize: 11, fontFamily: "monospace" },
           itemWidth: 12,
           itemHeight: 8,
         },
@@ -413,7 +413,7 @@ export function ResourceChart({ runs }: { runs: ExplorerRun[] }) {
         xAxis: {
           type: "category",
           data: groupDefs.map((g) => g.label),
-          axisLabel: { color: "#a1a1aa", fontFamily: "monospace", fontSize: 10 },
+          axisLabel: { color: "#a1a1aa", fontFamily: "monospace", fontSize: 11 },
           axisLine: { lineStyle: { color: "#27272a" } },
         },
         yAxis: {
@@ -421,8 +421,8 @@ export function ResourceChart({ runs }: { runs: ExplorerRun[] }) {
           name: "Multiplier vs baseline",
           nameLocation: "middle",
           nameGap: 42,
-          nameTextStyle: { color: "#a1a1aa", fontSize: 10, fontFamily: "monospace" },
-          axisLabel: { color: "#71717a", fontFamily: "monospace", fontSize: 10, formatter: (v: number) => `${v}x` },
+          nameTextStyle: { color: "#a1a1aa", fontSize: 11, fontFamily: "monospace" },
+          axisLabel: { color: "#a1a1aa", fontFamily: "monospace", fontSize: 11, formatter: (v: number) => `${v}x` },
           splitLine: { lineStyle: { color: "#18181b", type: "dashed" } },
           axisLine: { lineStyle: { color: "#27272a" } },
         },
@@ -456,7 +456,7 @@ export function ResourceChart({ runs }: { runs: ExplorerRun[] }) {
         note={`baseline: ${rc.baseline?.modelDisplayName} · ${rc.configs.length} configs${hidden > 0 ? ` · ${hidden} not drawn` : ""}`}
       />
       {rc.notes.length > 0 && (
-        <div className="px-2 pt-1.5 text-[9px] text-zinc-500 font-mono flex flex-wrap gap-x-4">
+        <div className="px-2 pt-1.5 text-[11px] text-zinc-500 font-mono flex flex-wrap gap-x-4">
           {rc.notes.map((n) => (
             <span key={n}>{n}</span>
           ))}

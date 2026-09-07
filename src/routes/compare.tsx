@@ -5,6 +5,7 @@ import { Columns3 } from "lucide-react";
 import { getCompareData } from "../server/functions";
 import type { ExplorerRun } from "../server/functions";
 import { parseListParam } from "../compare";
+import { benchLabel } from "../components/FilterRail";
 
 const searchSchema = z.object({
   benchmark: z.string().optional(),
@@ -60,20 +61,20 @@ function fmtTokens(n: number): string {
 function StatusBadge({ run }: { run: ExplorerRun }) {
   if (run.isKnee) {
     return (
-      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/60 text-cyan-300 font-bold text-[10px] tracking-wide">
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/60 text-cyan-300 font-bold text-[11px] tracking-wide">
         KNEE
       </span>
     );
   }
   if (run.isFrontier) {
     return (
-      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 font-semibold text-[10px] tracking-wide">
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 font-semibold text-[11px] tracking-wide">
         FRONTIER
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800/60 text-zinc-500 text-[10px] tracking-wide">
+    <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800/60 text-zinc-500 text-[11px] tracking-wide">
       DOMINATED
     </span>
   );
@@ -88,7 +89,7 @@ function CoverageChips({ run }: { run: ExplorerRun }) {
     { ok: run.hasCi, label: "CI", title: "Confidence interval reported" },
   ];
   return (
-    <div className="flex items-center gap-1 text-[9px] font-mono">
+    <div className="flex items-center gap-1 text-[11px] font-mono">
       {chips.map((c) => (
         <span
           key={c.label}
@@ -144,7 +145,7 @@ function ComparePage() {
             ranking.
           </span>
         </div>
-        <div className="hidden md:flex items-center gap-2 text-[10px] text-zinc-500 font-mono">
+        <div className="hidden md:flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
           <span>reported cost basis</span>
           <span>&bull;</span>
           <a href="/methodology" className="underline hover:text-zinc-300">
@@ -157,7 +158,7 @@ function ComparePage() {
         {/* Header */}
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono">
+            <div className="text-[11px] uppercase tracking-wider text-zinc-500 font-mono">
               <Link to="/" search={{ benchmark: benchmarkId || undefined }} className="underline hover:text-zinc-300">
                 Explorer
               </Link>{" "}
@@ -172,7 +173,7 @@ function ComparePage() {
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-[10px] uppercase tracking-wider text-zinc-500">Benchmark</label>
+            <label className="text-[11px] uppercase tracking-wider text-zinc-500">Benchmark</label>
             <select
               value={benchmarkId}
               onChange={(e) => updateBenchmark(e.target.value)}
@@ -181,7 +182,7 @@ function ComparePage() {
             >
               {data.benchmarkOptions.map((b) => (
                 <option key={b.id} value={b.id}>
-                  {b.displayLabel}
+                  {benchLabel(b)}
                 </option>
               ))}
             </select>
@@ -193,10 +194,10 @@ function ComparePage() {
           <div className="bg-amber-950/20 border border-amber-500/30 rounded px-3 py-2 text-[11px] text-amber-200/90">
             Not on {data.currentBenchmark?.benchmarkName} {data.currentBenchmark?.version}:
             {data.unknownIds.length > 0 && (
-              <span className="font-mono text-[10px]"> ids: {data.unknownIds.join(", ")}</span>
+              <span className="font-mono text-[11px]"> ids: {data.unknownIds.join(", ")}</span>
             )}
             {data.unknownSlugs.length > 0 && (
-              <span className="font-mono text-[10px]">
+              <span className="font-mono text-[11px]">
                 {" "}slugs: {data.unknownSlugs.join(", ")}
               </span>
             )}
@@ -233,7 +234,7 @@ function ComparePage() {
               <span className="font-semibold uppercase tracking-wider">
                 {data.currentBenchmark?.benchmarkName} {data.currentBenchmark?.version}
               </span>
-              <span className="text-zinc-500 text-[10px] font-mono">
+              <span className="text-zinc-500 text-[11px] font-mono">
                 {costBasis === "today"
                   ? "today basis — runs without restated pricing show —"
                   : "reported basis"}{" "}
@@ -242,7 +243,7 @@ function ComparePage() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
-                <thead className="bg-zinc-900 border-b border-zinc-800 text-[10px] uppercase tracking-wider text-zinc-500">
+                <thead className="bg-zinc-900 border-b border-zinc-800 text-[11px] uppercase tracking-wider text-zinc-500">
                   <tr>
                     <th className="px-3 py-2 font-semibold">Status</th>
                     <th className="px-3 py-2 font-semibold">Configuration</th>
@@ -286,7 +287,7 @@ function ComparePage() {
                           >
                             {r.modelDisplayName}
                           </Link>
-                          <div className="text-[10px] text-zinc-500 font-mono">
+                          <div className="text-[11px] text-zinc-500 font-mono">
                             {r.harnessName}
                             {r.harnessVersion !== "default" ? ` v${r.harnessVersion}` : ""} ·{" "}
                             {r.effortPresetSlug}
@@ -296,7 +297,7 @@ function ComparePage() {
                           <span className={`${isBestSolve ? "font-bold text-emerald-400" : "font-bold text-zinc-100"}`}>
                             {r.solveRate.toFixed(1)}%
                           </span>{" "}
-                          <span className="text-[10px] text-zinc-500 font-mono">
+                          <span className="text-[11px] text-zinc-500 font-mono">
                             {r.nSolved}/{r.nTotal}
                           </span>
                         </td>
@@ -318,7 +319,7 @@ function ComparePage() {
                             <span className="text-zinc-600">—</span>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-[10px] text-zinc-400 font-mono whitespace-nowrap">
+                        <td className="px-3 py-2 text-[11px] text-zinc-400 font-mono whitespace-nowrap">
                           {r.hasPassAtK ? (
                             <PassKInline json={r.passAtK} />
                           ) : (
@@ -340,7 +341,7 @@ function ComparePage() {
                         </td>
                         <td className="px-3 py-2">
                           <span
-                            className={`text-[10px] ${r.sourceOfficial ? "text-emerald-500/80" : "text-zinc-500"}`}
+                            className={`text-[11px] ${r.sourceOfficial ? "text-emerald-500/80" : "text-zinc-500"}`}
                             title={r.sourceRunId}
                           >
                             {r.sourceName}
@@ -356,7 +357,7 @@ function ComparePage() {
           </div>
         )}
 
-        <p className="text-[10px] text-zinc-600">
+        <p className="text-[11px] text-zinc-600">
           Pins are per benchmark version by construction: pins carried from another board appear in
           the “Not on …” note above instead of the matrix. Frontier/knee badges are computed against
           every run on this benchmark slice (reported basis).

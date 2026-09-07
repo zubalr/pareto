@@ -68,7 +68,7 @@ function CoverageChips({ run }: { run: ExplorerRun }) {
     { ok: run.hasCi, label: "CI", title: "Confidence interval reported" },
   ];
   return (
-    <div className="flex items-center gap-1.5 text-[10px] font-mono">
+    <div className="flex items-center gap-1.5 text-[11px] font-mono">
       {chips.map((c) => (
         <span
           key={c.label}
@@ -103,11 +103,11 @@ function Tile({
         ok === false ? "border-zinc-800/60" : "border-zinc-800/80"
       }`}
     >
-      <div className="text-[9px] uppercase text-zinc-500 font-semibold tracking-wider">{label}</div>
+      <div className="text-[11px] uppercase text-zinc-500 font-semibold tracking-wider">{label}</div>
       <div className={`text-sm font-bold font-mono ${ok === false ? "text-zinc-600" : "text-zinc-100"}`}>
         {value}
       </div>
-      {sub && <div className="text-[10px] text-zinc-500">{sub}</div>}
+      {sub && <div className="text-[11px] text-zinc-500">{sub}</div>}
     </div>
   );
 }
@@ -141,7 +141,7 @@ function RunDossierPage() {
           <span className="text-amber-400 font-bold tracking-wide">NOTE</span>
           <span>Run dossier — compiled/seed aggregate for one configuration. Aggregate metrics only; no benchmark task text.</span>
         </div>
-        <div className="hidden md:flex items-center gap-2 text-[10px] text-zinc-500 font-mono">
+        <div className="hidden md:flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
           <a href="/methodology" className="underline hover:text-zinc-300">methodology</a>
         </div>
       </div>
@@ -150,7 +150,7 @@ function RunDossierPage() {
         {/* Header + nav */}
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono flex items-center gap-1.5">
+            <div className="text-[11px] uppercase tracking-wider text-zinc-500 font-mono flex items-center gap-1.5">
               <Link
                 to="/"
                 search={{
@@ -171,7 +171,7 @@ function RunDossierPage() {
                 {run.harnessVersion !== "default" ? ` v${run.harnessVersion}` : ""} · effort {run.effortPresetSlug}
               </span>
             </h1>
-            <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
+            <div className="text-[11px] text-zinc-500 font-mono mt-0.5">
               run id {run.id} · {bench.nTasks}-task suite
             </div>
           </div>
@@ -240,7 +240,7 @@ function RunDossierPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* Cost detail */}
           <div className="bg-zinc-950 rounded border border-zinc-800/80 p-3 flex flex-col gap-2">
-            <div className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold">
+            <div className="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold">
               Cost basis detail
             </div>
             <div className="text-xs text-zinc-300 flex flex-col gap-1.5">
@@ -255,7 +255,7 @@ function RunDossierPage() {
               <div className="flex items-baseline justify-between border-b border-zinc-800/60 pb-1.5">
                 <span className="text-zinc-400">
                   Restated (today pricing){" "}
-                  <span className="text-[9px] text-zinc-600">coverage-gated</span>
+                  <span className="text-[11px] text-zinc-600">coverage-gated</span>
                 </span>
                 <span className={`font-mono ${restatedPerTask !== null ? "text-zinc-200" : "text-zinc-600"}`}>
                   {restatedPerTask !== null ? `${fmtUsd(restatedPerTask)}/task` : "not restated"}
@@ -265,7 +265,7 @@ function RunDossierPage() {
                 <span className="text-zinc-400">$/resolved</span>
                 <span className="font-mono text-zinc-300">
                   {perResolved !== null ? fmtUsd(perResolved) : "—"}
-                  <span className="text-[9px] text-zinc-600 ml-1">amortized, hides failures</span>
+                  <span className="text-[11px] text-zinc-600 ml-1">amortized, hides failures</span>
                 </span>
               </div>
               <div className="flex items-baseline justify-between">
@@ -282,7 +282,7 @@ function RunDossierPage() {
 
           {/* Telemetry */}
           <div className="bg-zinc-950 rounded border border-zinc-800/80 p-3 flex flex-col gap-2">
-            <div className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold">
+            <div className="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold">
               Telemetry
             </div>
             <div className="text-xs text-zinc-300 flex flex-col gap-1.5">
@@ -308,7 +308,7 @@ function RunDossierPage() {
               </div>
               <div className="flex items-baseline justify-between">
                 <span className="text-zinc-400">Source run</span>
-                <span className="font-mono text-[10px] text-zinc-400" title={run.sourceRunId}>
+                <span className="font-mono text-[11px] text-zinc-400" title={run.sourceRunId}>
                   {run.sourceRunId}
                 </span>
               </div>

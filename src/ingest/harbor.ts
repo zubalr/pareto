@@ -3,6 +3,7 @@ import {
   inferProvider,
   cleanModelName,
   modelToSlug,
+  humanizeModelDisplayName,
 } from "./aider";
 
 export const TBENCH_URL = "https://www.tbench.ai/";
@@ -11,7 +12,7 @@ export const HARBOR_SOURCE_ID = "01J8SOURCE00000000000HARBOR";
 
 export function parseHarborEffortSlug(rawEffort?: string): string {
   const effort = rawEffort?.toLowerCase().trim();
-  if (effort === "xhigh") return "xhigh";
+  if (effort === "xhigh" || effort === "extra-high" || effort === "extra_high") return "xhigh";
   if (effort === "max") return "max";
   if (effort === "high") return "high";
   if (effort === "medium" || effort === "med") return "medium";
@@ -172,6 +173,7 @@ export async function ingestHarbor({
 
     const newId = generateDeterministicId("01J8MODEL", slug);
     const { providerId } = inferProvider(cleaned);
+    const humanName = humanizeModelDisplayName(cleaned);
     const now = new Date().toISOString();
 
     prepStatements.push(
@@ -179,7 +181,7 @@ export async function ingestHarbor({
         .prepare(
           "INSERT OR IGNORE INTO models (id, provider_id, slug, display_name, created_at) VALUES (?, ?, ?, ?, ?)"
         )
-        .bind(newId, providerId, slug, cleaned, now)
+        .bind(newId, providerId, slug, humanName, now)
     );
     prepStatements.push(
       d1

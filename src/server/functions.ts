@@ -716,3 +716,82 @@ export const getIngestHealth = createServerFn().handler(
     }
   }
 );
+
+// ---------------------------------------------------------------------------
+// Model cross-bench index — every benchmark version a slug appears on.
+// Read-only D1. Each entry links to that bench's board; benches are never mixed
+// into one scatter.
+// ---------------------------------------------------------------------------
+
+export interface ModelBenchEntry {
+  benchmarkVersionId: string;
+  benchmarkName: string;
+  version: string;
+  nTasks: number;
+  runs: number;
+  bestSolve: number;
+  cheapestPerTask: number | null;
+  effortPresets: string[];
+}
+
+export interface ModelIndexResponse {
+  entries: ModelBenchEntry[];
+  error: string | null;
+}
+
+export const getModelIndex = createServerFn()
+  .validator((input: { slug: string }) => input)
+  .handler(async ({ data }): Promise<ModelIndexResponse> => {
+    try {
+      const db = getDb();
+
+      const rows = await db
+        .select({
+          benchmarkVersionId: benchmarkVersions.id,
+          benchmarkName: benchmarks.name,
+          version: benchmarkVersions.version,
+          nTasks: benchmarkVersions.nTasks,
+          solveRate: benchmarkRuns.solveRate,
+          costPerTask: benchmarkRuns.costPerTaskReported,
+          effort: effortPresets.slug,
+        })
+        .from(benchmarkRuns)
+        .innerJoin(benchmarkVersions, eq(benchmarkRuns.benchmarkVersionId, benchmarkVersions.id))
+        .innerJoin(benchmarks, eq(benchmarkVersions.benchmarkId, benchmarks.id))
+        .innerJoin(models, eq(benchmarkRuns.modelId, models.id))
+        .innerJoin(effortPresets, eq(benchmarkRuns.effortPresetId, effortPresets.id))
+        .where(eq(models.slug, data.slug));
+
+      const byBench = new Map<string, ModelBenchEntry>();
+      for (const r of rows) {
+        let entry = byBench.get(r.benchmarkVersionId);
+        if (!entry) {
+          entry = {
+            benchmarkVersionId: r.benchmarkVersionId,
+            benchmarkName: r.benchmarkName,
+            version: r.version,
+            nTasks: r.nTasks,
+            runs: 0,
+            bestSolve: 0,
+            cheapestPerTask: null,
+            effortPresets: [],
+          };
+          byBench.set(r.benchmarkVersionId, entry);
+        }
+        entry.runs += 1;
+        entry.bestSolve = Math.max(entry.bestSolve, r.solveRate);
+        if (r.costPerTask !== null && r.costPerTask > 0) {
+          entry.cheapestPerTask =
+            entry.cheapestPerTask === null
+              ? r.costPerTask
+              : Math.min(entry.cheapestPerTask, r.costPerTask);
+        }
+        if (!entry.effortPresets.includes(r.effort)) entry.effortPresets.push(r.effort);
+      }
+
+      const entries = Array.from(byBench.values()).sort((a, b) => b.runs - a.runs);
+      return { entries, error: null };
+    } catch (err: any) {
+      return { entries: [], error: err?.message || "Failed to load model index from D1." };
+    }
+  });

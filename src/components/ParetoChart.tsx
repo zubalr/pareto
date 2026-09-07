@@ -1,6 +1,10 @@
 import React, { useEffect, useRef } from "react";
 import { Pin } from "lucide-react";
 import type { ExplorerRun } from "../server/functions";
+import { effortRank } from "../finder";
+
+// Categorical palette shared with the chart slots (kept local to avoid a cycle).
+const SLOT_COLORS = ["#10b981", "#06b6d4", "#a78bfa", "#f59e0b", "#f472b6", "#60a5fa"];
 
 interface ParetoChartProps {
   runs: ExplorerRun[];
@@ -11,6 +15,7 @@ interface ParetoChartProps {
   onSelectPin: (id: string | null) => void;
   onHoverPoint: (id: string | null) => void;
   onOpenDossier?: (id: string) => void;
+  colorBy?: "harness" | "effort" | "none";
   costBasis: "reported" | "today";
 }
 
@@ -46,6 +51,7 @@ export function ParetoChart({
   onSelectPin,
   onHoverPoint,
   onOpenDossier,
+  colorBy = "harness",
   costBasis,
 }: ParetoChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
@@ -56,6 +62,28 @@ export function ParetoChart({
   // Coverage rule: a run without positive reported cost never gets an X coordinate.
   const validRuns = runs.filter(
     (r) => r.hasCost && r.cost !== null && r.cost !== undefined && r.cost > 0 && !Number.isNaN(r.cost)
+  );
+
+  // colorBy: categorical hue per harness or effort preset. Component scope so the
+  // SSR'd legend and the effect share one source of truth.
+  const categoryKeys = React.useMemo(() => {
+    if (colorBy === "effort") {
+      return Array.from(new Set(runs.map((r) => r.effortPresetSlug))).sort(
+        (a, b) => effortRank(a) - effortRank(b) || a.localeCompare(b)
+      );
+    }
+    if (colorBy === "harness") {
+      return Array.from(new Set(runs.map((r) => r.harnessName))).sort();
+    }
+    return [];
+  }, [runs, colorBy]);
+  const categoryColor = React.useMemo(
+    () => new Map(categoryKeys.map((k, i) => [k, SLOT_COLORS[i % SLOT_COLORS.length]])),
+    [categoryKeys]
+  );
+  const isKneePoint = React.useCallback(
+    (r: ExplorerRun) => kneePoint?.id === r.id,
+    [kneePoint]
   );
 
   const emptyMessage =
@@ -141,6 +169,16 @@ export function ParetoChart({
       // frontier math is computed over every run either way — no subsampling.
       const dense = validRuns.length > 60;
 
+      // colorBy: assign a categorical hue per harness or effort preset. Frontier
+      // size/polyline and the cyan knee keep their encodings; dominated points
+      // stay quiet via opacity. colorBy=none restores the gray-dominated scheme.
+      const fillFor = (r: ExplorerRun): string => {
+        if (isKneePoint(r)) return COLOR.knee;
+        if (colorBy === "none") return r.isFrontier ? COLOR.frontier : COLOR.dominated;
+        const key = colorBy === "effort" ? r.effortPresetSlug : r.harnessName;
+        return categoryColor.get(key) ?? COLOR.dominated;
+      };
+
       // Log-scale X bounds: half a decade below and ~25% above so edge points breathe.
       const xMin = minCost / 2;
       const xMax = minCost === maxCost ? maxCost * 2 : maxCost * 1.25;
@@ -154,11 +192,11 @@ export function ParetoChart({
       const polylineData = sortedFrontier.map((r) => [r.cost, r.solveRate]);
 
       const scatterData = validRuns.map((r, i) => {
-        const isKnee = kneePoint?.id === r.id;
+        const knee = isKneePoint(r);
         const isPinned = pinnedIds.includes(r.id);
 
         let symbolSize = 7;
-        let color = COLOR.dominated;
+        let color = fillFor(r);
         let borderColor = "#18181b";
         let borderWidth = 1;
         let opacity = dense ? 0.3 : 0.45;
@@ -167,13 +205,13 @@ export function ParetoChart({
 
         if (r.isFrontier) {
           symbolSize = 11;
-          color = COLOR.frontier;
           borderColor = "#064e3b";
           borderWidth = 1.5;
           opacity = 1;
+          if (colorBy === "none") color = COLOR.frontier;
         }
 
-        if (isKnee) {
+        if (knee) {
           symbolSize = 16;
           color = COLOR.knee;
           borderColor = "#ffffff";
@@ -381,7 +419,7 @@ export function ParetoChart({
     // hoveredId intentionally excluded: hover emphasis is applied via
     // dispatchAction in the effect below so tooltips are not destroyed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runs, frontier, kneePoint, pinnedIds, costBasis]);
+  }, [runs, frontier, kneePoint, pinnedIds, costBasis, colorBy, categoryKeys]);
 
   // Hover sync (chart <-> table) without rebuilding the option.
   useEffect(() => {
@@ -426,10 +464,27 @@ export function ParetoChart({
               <span className="text-cyan-400 font-medium">Knee</span>
             </span>
           )}
-          <span className="flex items-center gap-1.5 text-zinc-500">
-            <span className="h-2 w-2 rounded-full bg-zinc-500 opacity-50 inline-block" />
-            <span className="text-zinc-500">Dominated</span>
-          </span>
+          {colorBy !== "none" ? (
+            <span className="flex items-center gap-2.5 flex-wrap">
+              {categoryKeys.slice(0, 6).map((k) => (
+                <span key={k} className="flex items-center gap-1 text-zinc-400">
+                  <span
+                    className="h-2 w-2 rounded-full inline-block"
+                    style={{ backgroundColor: categoryColor.get(k) ?? COLOR.dominated }}
+                  />
+                  {k}
+                </span>
+              ))}
+              {categoryKeys.length > 6 && (
+                <span className="text-zinc-600">+{categoryKeys.length - 6}</span>
+              )}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 text-zinc-500">
+              <span className="h-2 w-2 rounded-full bg-zinc-500 opacity-50 inline-block" />
+              <span className="text-zinc-500">Dominated</span>
+            </span>
+          )}
           {pinnedIds.length > 0 && (
             <span className="flex items-center gap-1 text-amber-400">
               <Pin size={10} />

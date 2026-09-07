@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, useNavigate as useNav, Link } from "@tanstack/react-router";
 import * as React from "react";
 import { z } from "zod";
-import { Zap, Columns3 } from "lucide-react";
+import { Zap, Columns3, X, SlidersHorizontal } from "lucide-react";
 import { getExplorerData } from "../server/functions";
 import { ParetoChart } from "../components/ParetoChart";
 import { PassAtKChart, EffortChart, ResourceChart } from "../components/ChartSlots";
@@ -19,6 +19,7 @@ const searchSchema = z.object({
   pinned: z.string().optional(),
   chart: z.enum(["pareto", "passk", "effort", "resources"]).optional(),
   effortMatch: z.enum(["all", "max", "xhigh"]).optional(),
+  colorBy: z.enum(["harness", "effort", "none"]).optional(),
 });
 
 export type ExplorerSearch = z.infer<typeof searchSchema>;
@@ -51,6 +52,10 @@ export const Route = createFileRoute("/")({
       effortMatch:
         search.effortMatch === "max" || search.effortMatch === "xhigh"
           ? search.effortMatch
+          : undefined,
+      colorBy:
+        search.colorBy === "effort" || search.colorBy === "none" || search.colorBy === "harness"
+          ? search.colorBy
           : undefined,
     };
   },
@@ -188,6 +193,7 @@ function ExplorerPage() {
   const navigate = useNavigate({ from: Route.fullPath });
 
   const [hoveredId, setHoveredId] = React.useState<string | null>(null);
+  const [railOpen, setRailOpen] = React.useState(false);
 
   const selectedBenchmarkId =
     search.benchmark || (data.currentBenchmark ? data.currentBenchmark.id : undefined);
@@ -303,6 +309,13 @@ function ExplorerPage() {
     }));
   };
 
+  const handleColorByChange = (c: "harness" | "effort" | "none") => {
+    updateSearch((prev) => ({
+      ...prev,
+      colorBy: c === "harness" ? undefined : c, // harness is the default → keep URLs clean
+    }));
+  };
+
   const hasActiveFilters =
     selectedModels.length > 0 ||
     selectedHarnesses.length > 0 ||
@@ -352,6 +365,16 @@ function ExplorerPage() {
             </>
           )}
         </div>
+        <div className="flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
+          <button
+            type="button"
+            onClick={() => setRailOpen(true)}
+            className="lg:hidden inline-flex items-center gap-1.5 px-2 py-0.5 rounded border border-zinc-700 text-zinc-200 hover:bg-zinc-900"
+          >
+            <SlidersHorizontal size={11} />
+            Filters
+          </button>
+        </div>
         <div className="hidden md:flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
           {seedRows > 0 && (
             <>
@@ -375,8 +398,33 @@ function ExplorerPage() {
 
       <IngestHealthStrip />
 
-      {/* Main Content: Filter Rail + Chart + Table */}
+      {/* Main Content: Filter Rail (drawer < lg) + Chart + Table */}
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+        {railOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/60 lg:hidden"
+            onClick={() => setRailOpen(false)}
+            aria-hidden
+          />
+        )}
+        <div
+          className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] overflow-y-auto shadow-2xl transition-transform duration-200 lg:contents lg:shadow-none ${
+            railOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <div className="flex items-center justify-between px-3.5 pt-3 pb-1 lg:hidden">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-300">
+              Filters
+            </span>
+            <button
+              type="button"
+              onClick={() => setRailOpen(false)}
+              aria-label="Close filters"
+              className="p-1 rounded hover:bg-zinc-900 text-zinc-300"
+            >
+              <X size={14} />
+            </button>
+          </div>
         <FilterRail
           benchmarks={data.benchmarkOptions}
           selectedBenchmarkId={selectedBenchmarkId}
@@ -397,6 +445,7 @@ function ExplorerPage() {
           onResetFilters={handleResetFilters}
           hasActiveFilters={hasActiveFilters}
         />
+        </div>
 
         <div className="flex-1 flex flex-col p-3 gap-3 overflow-y-auto min-h-0">
           {/* Status strip */}
@@ -490,6 +539,21 @@ function ExplorerPage() {
                   Compare pins ({pinnedIds.length})
                 </Link>
               )}
+              <div className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+                <label htmlFor="color-by">Color</label>
+                <select
+                  id="color-by"
+                  value={search.colorBy ?? "harness"}
+                  onChange={(e) =>
+                    handleColorByChange(e.target.value as "harness" | "effort" | "none")
+                  }
+                  className="bg-zinc-900 border border-zinc-700/80 text-zinc-200 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-emerald-500 cursor-pointer"
+                >
+                  <option value="harness">harness</option>
+                  <option value="effort">effort</option>
+                  <option value="none">none</option>
+                </select>
+              </div>
               <span className="text-[11px] text-zinc-600 font-mono">
                 slot: {chartSlot}
                 {chartSlot !== "pareto" ? ` (?chart=${chartSlot})` : ""}
@@ -506,6 +570,7 @@ function ExplorerPage() {
               hoveredId={hoveredId}
               onSelectPin={handleSelectPin}
               onHoverPoint={setHoveredId}
+              colorBy={(search.colorBy ?? "harness") as "harness" | "effort" | "none"}
               onOpenDossier={(id) =>
                 navigateToDossier({
                   to: "/runs/$id",

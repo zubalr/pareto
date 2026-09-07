@@ -429,3 +429,30 @@ below is the primary view"); benchmark selector labels deduped ("Terminal-Bench 
 | 67 | Keyboard: rail search boxes, checkboxes, segmented buttons, and table model links are natively tabbable/Enter-activatable (verified via DOM roles); chart remains the only pointer-affordance and duplicates table data | PASS |
 | 68 | Default slice: at QA time (`46996a19`) `/` still landed on TB 4.0 seed — DeepSWE fully reachable via `?benchmark=01J8BV000000000000DEEPSWE11` (listed in the selector). Agy's `7c08e52` subsequently landed the DeepSWE default + canonical model identity pass; the switch goes live on their next deploy | RESOLVED upstream |
 | 69 | `pnpm test --run` | PASS (70 tests incl. effortMatch key-distinctness + cheapest-at-floor) |
+
+### Phase 9 — volume pass QA (production `bdbecf64`/`665aaa21`, 2026-09-07)
+
+Shipped: methodology rewrite (DeepSWE default story, real worked run id, official-vs-seed
+provenance, non-claims), scatter `colorBy=harness|effort|none` (default harness) with
+categorical legend, table Effort column + tiered default sort (knee → frontier → solve
+desc), model-page cross-bench index (every bench a slug appears on, each linking to its
+own board) + effort curve when ≥2 presets, Finder `effortMatch` chip, mobile filter
+drawers on Explorer and Finder (< lg), README default-board update, robots.txt.
+**Defect found & fixed mid-phase: the colorBy legend referenced effect-scoped maps →
+`ReferenceError: categoryKeys is not defined` killed Explorer SSR entirely (empty first
+paint, client-only render). Category maps moved to component scope (`useMemo`); a
+shadowed `isKnee` boolean (would have thrown `isKnee is not a function` in the chart)
+removed. Production SSR re-verified after deploy.**
+
+| # | Check (production) | Result |
+|---|---|---|
+| 70 | Methodology: default story is DeepSWE (knee DeepSeek V4 Pro · $0.24/task · 62.8%); worked Finder example cites real run id `01J8RUNDS008CD10CMINISWEAG`; official-vs-seed provenance named (Harbor/Aider/SWE official, TB4 archive compiled); non-claims added (not an independent eval lab, not an AA index) | PASS |
+| 71 | `colorBy=harness` default: categorical legend in chart header (mini-SWE-agent hue visible), dominated points stay quiet, knee cyan + frontier polyline unchanged; `colorBy=effort`/`none` round-trip | PASS |
+| 72 | Table: Effort column added (sortable), harness·effort no longer crammed, default order knee → frontier → solve desc | PASS |
+| 73 | `/models/gpt-6-astra`: "Appears on 4 boards" index (TB×3, DeepSWE×2, SWE×1, Aider×1) each linking to its own board; effort curve renders when ≥2 presets | PASS |
+| 74 | Finder: `effortMatch` chip in banner clears on click; typography at the Phase-8 floor | PASS |
+| 75 | Mobile 375px: Explorer has no page-wide horizontal scroll (scrollWidth ≤ clientWidth); "Filters" button opens the rail as a drawer with all sections; Finder gets the same drawer ("Inputs") | PASS |
+| 76 | Explorer SSR: restored after the colorBy scope fix — `<aside>`, Match effort, search box, and color select all server-rendered | FIXED |
+| 77 | DeepSWE default on `/` (Agy's `7c08e52` live); Harbor TB2 still 18 rows — nothing faked | PASS |
+| 78 | README: default board = DeepSWE called out in intro + routes table | PASS |
+| 79 | `pnpm test --run` | PASS (71) |

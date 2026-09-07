@@ -2,9 +2,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import * as React from "react";
 import { z } from "zod";
 import { Pin } from "lucide-react";
-import { getModelData, type ExplorerRun } from "../server/functions";
+import { getModelData, getModelIndex, type ExplorerRun } from "../server/functions";
 import { useEChart } from "../components/ChartSlots";
 import { benchLabel } from "../components/FilterRail";
+import { EffortChart } from "../components/ChartSlots";
 import { parsePassAtK } from "../finder";
 
 const searchSchema = z.object({
@@ -23,9 +24,11 @@ export const Route = createFileRoute("/models/$slug")({
   }),
   loaderDeps: ({ search }) => ({ benchmark: search.benchmark }),
   loader: async ({ deps, params }) => {
-    return await getModelData({
-      data: { slug: params.slug, benchmarkVersionId: deps.benchmark },
-    });
+    const [data, index] = await Promise.all([
+      getModelData({ data: { slug: params.slug, benchmarkVersionId: deps.benchmark } }),
+      getModelIndex({ data: { slug: params.slug } }),
+    ]);
+    return { ...data, index };
   },
   component: ModelPage,
 });
@@ -274,6 +277,54 @@ function ModelPage() {
           </div>
         )}
 
+        {data.model && data.index.entries.length > 1 && (
+          <div className="bg-zinc-950 rounded border border-zinc-800/80 overflow-hidden">
+            <div className="px-3 py-2 bg-zinc-900/60 border-b border-zinc-800/60 text-[11px] text-zinc-400">
+              <span className="font-semibold uppercase tracking-wider">
+                Appears on {data.index.entries.length} boards
+              </span>
+              <span className="text-zinc-600 ml-2">
+                each opens its own board — benches are never mixed on one scatter
+              </span>
+            </div>
+            <div className="divide-y divide-zinc-800/60">
+              {data.index.entries.map((e) => {
+                const active = e.benchmarkVersionId === (search.benchmark || data.currentBenchmark?.id);
+                return (
+                  <Link
+                    key={e.benchmarkVersionId}
+                    to="/models/$slug"
+                    params={{ slug }}
+                    search={{ benchmark: e.benchmarkVersionId }}
+                    className={`flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs transition-colors ${
+                      active ? "bg-cyan-950/20" : "bg-zinc-950 hover:bg-zinc-900"
+                    }`}
+                  >
+                    <span className="font-semibold text-zinc-100">
+                      {benchLabel({
+                        id: e.benchmarkVersionId,
+                        benchmarkName: e.benchmarkName,
+                        version: e.version,
+                        nTasks: e.nTasks,
+                        benchmarkSlug: "",
+                        displayLabel: "",
+                      })}
+                      {active && (
+                        <span className="ml-2 text-[11px] text-cyan-400 font-mono">viewing</span>
+                      )}
+                    </span>
+                    <span className="font-mono text-[11px] text-zinc-400">
+                      {e.runs} run{e.runs === 1 ? "" : "s"} · best {e.bestSolve.toFixed(1)}% ·{" "}
+                      {e.cheapestPerTask !== null ? `from $${e.cheapestPerTask.toFixed(2)}/task` : "no cost"} ·{" "}
+                      efforts: {e.effortPresets.join(", ")}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {data.model && (
           <>
             {/* Stat tiles */}
@@ -303,6 +354,13 @@ function ModelPage() {
                 <div className="text-[11px] text-zinc-500">undominated configurations</div>
               </div>
             </div>
+
+            {(() => {
+              const effortSet = new Set(runs.map((r) => r.effortPresetSlug));
+              return effortSet.size >= 2 ? (
+                <EffortChart runs={runs} />
+              ) : null;
+            })()}
 
             {withCost.length > 0 ? (
               <ModelMovementChart runs={runs} benchFrontier={data.benchFrontier} />

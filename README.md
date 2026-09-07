@@ -8,7 +8,7 @@ A dense, dark, operate-mode board that answers one question in ten seconds:
 
 Live: **https://pareto.jubairjashim1975.workers.dev**
 
-One point on the board is one *configuration run*:
+The **default board is DeepSWE 1.1** — ingested official leaderboard rows. One point on the board is one *configuration run*:
 `benchmark version × model × provider × harness version × effort preset → source run`.
 Every number keeps its provenance (`sourceRunId`, official/compiled flag) and every
 telemetry gap is an explicit coverage flag — missing cost, tokens, or latency is
@@ -34,7 +34,7 @@ telemetry gap is an explicit coverage flag — missing cost, tokens, or latency 
 
 | Route | What it does |
 |---|---|
-| `/` | Explorer: Pareto scatter (frontier + knee), Pass@k / Effort / Resources slots, filter rail, configurations table, multi-pin |
+| `/` | Explorer — default board: **DeepSWE 1.1**. Pareto scatter (frontier + knee, color by harness/effort), Pass@k / Effort / Resources slots, filter rail, configurations table, multi-pin. Archived seed slices (e.g. Terminal-Bench 4.0) remain selectable and labeled compiled |
 | `/finder` | Budget filter: max $/task (+ optional p50 cap) under three intents — max solve, min $/resolved, cheapest at a solve floor |
 | `/compare` | 2–8 pinned configurations side by side, same benchmark only |
 | `/models/$slug` | One base model across harnesses and efforts |

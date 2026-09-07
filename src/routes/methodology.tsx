@@ -59,9 +59,9 @@ function MethodologyPage() {
         </Formula>
         <ul className="list-disc list-inside text-xs text-zinc-400 space-y-1.5 leading-relaxed">
           <li>
-            <strong>Benchmark version</strong> — e.g. Terminal-Bench 4.0 (66 tasks). Points from
-            different benchmark versions are never plotted together; the benchmark selector is
-            single-choice and required.
+            <strong>Benchmark version</strong> — e.g. DeepSWE 1.1 (113 tasks) or Terminal-Bench 4.0
+            (66 tasks). Points from different benchmark versions are never plotted together; the
+            benchmark selector is single-choice and required.
           </li>
           <li>
             <strong>Harness version</strong> — the agent harness (Codex, Claude Code, Grok Build)
@@ -176,8 +176,10 @@ function MethodologyPage() {
             The <strong>knee</strong> is the frontier point maximizing the perpendicular distance{" "}
             <code className="text-zinc-200">d</code> above the unit diagonal — the point of
             diminishing returns where the next dollar buys visibly less solve. It is a geometric
-            property of the current slice: filter the board and the knee moves with it. For the
-            default Terminal-Bench 4.0 seed the knee lands on GLM-5.3 (Claude Code · max).
+            property of the current slice: filter the board (or switch cost basis or match an
+            effort preset) and the knee moves with it. On the default DeepSWE 1.1 board
+            (Reported basis) the knee lands on DeepSeek V4 Pro (mini-SWE-agent · max · $0.24/task ·
+            62.8%); switching to Today re-computes it over restated prices only.
           </p>
         </div>
       </Section>
@@ -214,30 +216,37 @@ function MethodologyPage() {
           </li>
         </ul>
         <p className="text-xs text-zinc-400 leading-relaxed">
-          Worked example on the default seed: a $50/task cap on Terminal-Bench 4.0 excludes 5 of 10
-          runs for budget (Grok 4.6 sits just over at $54.55/task); GLM-5.3 wins max-solve at 41.8%
-          ($40.91/task), with GPT-5.6 Sol and Terra as alternatives. Switching the objective to
-          min $/resolved instead crowns GPT-5.6 Luna at $27.27 per resolved task — a reminder that
-          $/resolved rewards cheap partial success and must be read next to solve rate.
+          Worked example on the default board: <code className="text-zinc-200">cheapest-at-floor</code>{" "}
+          with a 50% solve floor and a $2/task cap on DeepSWE 1.1 returns{" "}
+          <strong>DeepSeek V4 Flash</strong> (mini-SWE-agent · max · 53.3% · $0.10/task · 60/113
+          solved), run id{" "}
+          <code className="text-zinc-200">01J8RUNDS008CD10CMINISWEAG</code> — with DeepSeek V4 Pro
+          ($0.24/task · 62.8%) as the next alternative. Switch the objective to{" "}
+          <code className="text-zinc-200">max-solve</code> under the same cap and the answer
+          changes; that is the point of stating the rule. On the archived Terminal-Bench 4.0 seed
+          slice the same rules crown GLM-5.3 under a $50 cap — seed slices remain queryable and
+          labeled as compiled.
         </p>
       </Section>
 
       {/* 6. Seed provenance */}
       <Section n="6" title="Seed data provenance" accent="text-zinc-100">
         <p className="text-xs text-zinc-400 leading-relaxed">
-          Every seeded run is sourced from <code className="text-zinc-200">seed-compiled</code>{" "}
-          with <code className="text-zinc-200">official = 0</code>: aggregate numbers hand-compiled
-          from public leaderboards and eval reports to bootstrap the app. They are illustrative, not
-          audited.
+          The default board (DeepSWE 1.1) — and most slices — are now <strong>official
+          ingests</strong>: DeepSWE, Harbor/Terminal-Bench 2.0, the Aider polyglot leaderboard, and
+          SWE-bench Verified experiment rows, each carrying <code className="text-zinc-200">official = 1</code>{" "}
+          and a <code className="text-zinc-200">sourceRunId</code> pointing at the upstream record.
+          Slices mix sources only within one benchmark version, and the banner names the
+          composition (compiled vs official counts) on every board.
         </p>
         <p className="text-xs text-zinc-400 leading-relaxed">
-          For Terminal-Bench 4.0 (66 tasks), USD per task is derived as{" "}
-          <code className="text-zinc-200">listed_total_usd / 66</code>. SWE-bench Verified seed rows
-          use a synthetic 500-task slice constructed the same way. Ingest plans for first-party
-          sources (Aider polyglot YAML, OpenRouter model metadata, Harbor/Terminal-Bench submission
-          JSON, SWE-bench experiments) are catalogued in{" "}
-          <code className="text-zinc-200">docs/sources.md</code>; until those adapters run, this
-          board is a fixture.
+          The <strong>seed archive</strong> remains queryable: the Terminal-Bench 4.0 slice (and a
+          few SWE-bench Verified rows) are hand-compiled fixtures from public leaderboards with{" "}
+          <code className="text-zinc-200">official = 0</code> — illustrative, not audited, and
+          always labeled compiled on the board. For that archive, USD per task is derived as{" "}
+          <code className="text-zinc-200">listed_total_usd / n_tasks</code>. Source research,
+          licenses, and field mappings for every ingest are catalogued in{" "}
+          <code className="text-zinc-200">docs/sources.md</code>.
         </p>
       </Section>
 
@@ -257,9 +266,15 @@ function MethodologyPage() {
       <Section n="8" title="What this site is not" accent="text-zinc-100">
         <ul className="list-disc list-inside text-xs text-zinc-400 space-y-1.5 leading-relaxed">
           <li>
-            <strong>Not an official leaderboard.</strong> We run no primary evaluations. The board
-            computes cost-versus-accuracy frontiers from reported or compiled aggregates, and the
-            banner says so on every page.
+            <strong>Not an official leaderboard.</strong> We run no primary evaluations and are not
+            an independent evaluation lab — we re-grade nothing ourselves. The board computes
+            cost-versus-accuracy frontiers from reported or compiled aggregates, and the banner says
+            so on every page.
+          </li>
+          <li>
+            <strong>Not an Artificial Analysis index.</strong> Different scope, different method:
+            this is a single-benchmark frontier board over public run aggregates, not a
+            cross-vendor quality index. We publish per-run provenance instead of a composite score.
           </li>
           <li>
             <strong>Not a harness runner.</strong> Execution happens externally in standard

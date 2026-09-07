@@ -88,20 +88,31 @@ export function DataTable({
   onHoverRow,
   costBasis,
 }: DataTableProps) {
+  // Default order: knee → frontier → dominated, solve rate descending within tiers.
   const [sorting, setSorting] = React.useState<SortingState>([
+    { id: "rank", desc: true },
     { id: "solveRate", desc: true },
   ]);
 
   const columns = React.useMemo(
     () => [
-      columnHelper.accessor(
-        (r) => (r.isKnee ? 2 : r.isFrontier ? 1 : 0),
-        {
-          id: "status",
-          header: "Status",
-          cell: (info) => <StatusBadge run={info.row.original} />,
-        }
-      ),
+      // Default sort tier: knee (3) → frontier (2) → dominated (0), solve desc.
+      columnHelper.accessor((r) => (r.isKnee ? 3 : r.isFrontier ? 2 : 0), {
+        id: "rank",
+        header: "Status",
+        cell: (info) => <StatusBadge run={info.row.original} />,
+      }),
+
+      // Hidden effort value so the Effort column sorts too.
+      columnHelper.accessor("effortPresetSlug", {
+        id: "effort",
+        header: "Effort",
+        cell: (info) => (
+          <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-200 text-[11px] uppercase font-mono whitespace-nowrap">
+            {info.getValue()}
+          </span>
+        ),
+      }),
 
       // Pinned configuration column: the full run grain at a glance.
       columnHelper.display({
@@ -127,12 +138,10 @@ export function DataTable({
                   <Pin size={11} className="text-amber-400 shrink-0" aria-label="Pinned" />
                 )}
               </div>
-              <div className="text-[11px] text-zinc-500 flex items-center gap-1.5 flex-wrap">
+              <div className="text-[11px] text-zinc-400 flex items-center gap-1.5 flex-wrap">
                 <span>{run.harnessName}</span>
-                <span className="text-zinc-700">/</span>
-                <span className="px-1 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 uppercase font-mono">
-                  {run.effortPresetSlug}
-                </span>
+                <span className="text-zinc-600">/</span>
+                <span className="uppercase font-mono">{run.effortPresetSlug}</span>
               </div>
             </div>
           );

@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import * as React from "react";
 import { z } from "zod";
-import { CircleDollarSign, Timer, Target } from "lucide-react";
+import { CircleDollarSign, Timer, Target, X, SlidersHorizontal } from "lucide-react";
 import { getFinderData } from "../server/functions";
 import { selectFinder, FinderObjective } from "../finder";
 
@@ -162,6 +162,7 @@ function FinderPage() {
   const data = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
+  const [railOpen, setRailOpen] = React.useState(false);
 
   const benchmarkId = search.benchmark || data.currentBenchmark?.id || "";
   const maxCost = search.maxCost ?? "50";
@@ -201,12 +202,32 @@ function FinderPage() {
     <div className="flex-1 flex flex-col min-h-0 bg-[#09090b]">
       {/* Same compiled-data banner as the Explorer — a recommendation surface needs it most */}
       <div className="bg-zinc-900/90 border-b border-zinc-800 px-4 py-1.5 text-[11px] flex items-center justify-between gap-4 text-zinc-400">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-amber-400 font-bold tracking-wide">NOTE</span>
           <span>
             Finder applies your budget to compiled/seed runs — deterministic filter, not an official
             ranking.
           </span>
+          {effortMatch !== "all" && (
+            <button
+              type="button"
+              onClick={() => updateSearch({ effortMatch: undefined })}
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 font-mono hover:bg-emerald-950/90"
+              title="Click to clear effort matching"
+            >
+              effort: {effortMatch} <X size={9} />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
+          <button
+            type="button"
+            onClick={() => setRailOpen(true)}
+            className="lg:hidden inline-flex items-center gap-1.5 px-2 py-0.5 rounded border border-zinc-700 text-zinc-200 hover:bg-zinc-900"
+          >
+            <SlidersHorizontal size={11} />
+            Inputs
+          </button>
         </div>
         <div className="hidden md:flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
           <span>{costBasis === "today" ? "today basis — runs without restated pricing excluded" : "reported cost basis"}</span>
@@ -218,6 +239,31 @@ function FinderPage() {
       </div>
 
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+        {railOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/60 lg:hidden"
+            onClick={() => setRailOpen(false)}
+            aria-hidden
+          />
+        )}
+        <div
+          className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] overflow-y-auto shadow-2xl transition-transform duration-200 lg:contents lg:shadow-none ${
+            railOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <div className="flex items-center justify-between px-3.5 pt-3 pb-1 lg:hidden">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-300">
+              Finder inputs
+            </span>
+            <button
+              type="button"
+              onClick={() => setRailOpen(false)}
+              aria-label="Close finder inputs"
+              className="p-1 rounded hover:bg-zinc-900 text-zinc-300"
+            >
+              <X size={14} />
+            </button>
+          </div>
         {/* Input rail */}
         <aside className="w-full lg:w-60 bg-zinc-950 border-b lg:border-b-0 lg:border-r border-zinc-800/80 p-3.5 flex flex-col gap-5 text-xs shrink-0 overflow-y-auto">
           <div className="flex flex-col gap-1.5">
@@ -381,6 +427,7 @@ function FinderPage() {
             within budget.
           </p>
         </aside>
+        </div>
 
         {/* Results */}
         <div className="flex-1 flex flex-col p-3 gap-3 overflow-y-auto min-h-0">

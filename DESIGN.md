@@ -427,5 +427,5 @@ below is the primary view"); benchmark selector labels deduped ("Terminal-Bench 
 | 65 | SWE-bench Verified: 4/184 plotted → few-cost notice fires naming the table as the primary view; banner keeps "compiled" count | PASS |
 | 66 | Seed/official banners: TB seed still labeled compiled; DeepSWE/TB2 show official-source banner | PASS |
 | 67 | Keyboard: rail search boxes, checkboxes, segmented buttons, and table model links are natively tabbable/Enter-activatable (verified via DOM roles); chart remains the only pointer-affordance and duplicates table data | PASS |
-| 68 | Default slice: `/` still lands on TB 4.0 seed — DeepSWE default switch is Agy's; DeepSWE fully reachable via `?benchmark=01J8BV000000000000DEEPSWE11` (also listed in the selector) | NOTE — needs Agy default |
+| 68 | Default slice: at QA time (`46996a19`) `/` still landed on TB 4.0 seed — DeepSWE fully reachable via `?benchmark=01J8BV000000000000DEEPSWE11` (listed in the selector). Agy's `7c08e52` subsequently landed the DeepSWE default + canonical model identity pass; the switch goes live on their next deploy | RESOLVED upstream |
 | 69 | `pnpm test --run` | PASS (70 tests incl. effortMatch key-distinctness + cheapest-at-floor) |

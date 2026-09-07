@@ -59,6 +59,7 @@ $$
 - **Token telemetry required**: If `tokens_in` is missing, the run is never artificially restated from reported USD alone; `cost_usd_normalized` remains `NULL`.
 - **Reported costs preserved**: Maintainer-published costs (`cost_usd_reported`, `cost_per_task_reported`) are immutable and never overwritten.
 - **Minimal D1 churn**: Updates are conditional and idempotent; D1 `UPDATE` statements are only dispatched if computed values differ, adding ~20 writes/day (~600 writes/month).
+- **Harbor Ingest Volume**: Harbor evaluation ingest accounts for exactly 18 rows per cycle (50–60 D1 batch operations during updates), well below the 100k daily write safety envelope.
 
 ---
 

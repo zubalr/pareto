@@ -2,10 +2,13 @@
 
 ## Overview
 - **Repository Path**: `/home/wertyp/Code/Personal/pareto`
+- **GitHub Origin**: `https://github.com/zubalr/pareto`
 - **Worker Name**: `pareto`
 - **Cloudflare Account Name**: `Jubairjashim1975@gmail.com's Account`
 - **Cloudflare Account ID**: `d21ed3776239ca64aa352ebd2d66cce2`
 - **Production URL**: `https://pareto.jubairjashim1975.workers.dev`
+- **Default Benchmark**: **Datacurve DeepSWE 1.1** (`01J8BV000000000000DEEPSWE11`, 113 tasks)
+- **Health Endpoint**: `https://pareto.jubairjashim1975.workers.dev/api/ingest/health`
 - **D1 Database Name**: `pareto-catalog` (binding: `DB`, database_id: `cf4eae17-f102-480d-9fe5-e5c281fd3198`)
 - **KV Namespace Name**: `pareto-frontier` (binding: `FRONTIER`, id: `350de0bd422c42b595873959266dfdd4`)
 - **Daily Ingest Cron**: `0 6 * * *` (06:00 UTC daily)
@@ -16,7 +19,7 @@
 
 | Route | Description | Key Features |
 | :--- | :--- | :--- |
-| `/` | **Pareto Frontier Explorer** | Scatter plot, ranking table, multi-select filters (models, harnesses, efforts), cost basis toggle (`reported` vs `today`). |
+| `/` | **Pareto Frontier Explorer (Default: DeepSWE 1.1)** | Scatter plot, ranking table, multi-select filters (models, harnesses, efforts), cost basis toggle (`reported` vs `today`). |
 | `/finder` | **Budget & Target Solver** | Inverse frontier solver: minimum cost to achieve target solve rate, or maximum solve rate under cost ceiling. |
 | `/models/$slug` | **Model Profile** | Model card, cross-benchmark historical performance, harness breakdown, and cost restatement delta analysis. |
 | `/compare` | **Head-to-Head Comparison** | Side-by-side model/configuration diff with cost, solve rate, token efficiency, and duration deltas. |
@@ -31,11 +34,11 @@
 
 | Benchmark Name | Benchmark Version ID | Version | Total Tasks (`n_tasks`) | Primary Source |
 | :--- | :--- | :--- | :--- | :--- |
-| **Terminal-Bench** | `01J8BV0000000000000000TB40` | `4.0` | 66 | Harbor / tbench leaderboard |
-| **Terminal-Bench** | `01J8BV0000000000000000TB20` | `2.0` | 89 | Harbor / tbench leaderboard |
-| **Aider Polyglot** | `01J8BV0000000000000AIDER10` | `1.0` | 225 | Aider Polyglot leaderboard YAML |
+| **Datacurve DeepSWE** *(Default)* | `01J8BV000000000000DEEPSWE11` | `1.1` | 113 | Datacurve DeepSWE live leaderboard |
+| **Terminal-Bench (Harbor)** | `01J8BV000000000000000TB20` | `4.0` | 66 | Harbor / tbench live Next.js payload (330 trials / pass@5) |
+| **Terminal-Bench (Seed Archive)**| `01J8BV0000000000000000TB40` | `4.0` | 66 | Compiled seed fixtures |
+| **Aider Polyglot** | `01J8BVAIDER00000000000POLY` | `1.0` | 225 | Aider Polyglot leaderboard YAML |
 | **SWE-bench Verified** | `01J8BV000000000000000SWE10` | `1.0` | 500 | SWE-bench official results |
-| **Datacurve DeepSWE** | `01J8BV000000000000DEEPSWE11` | `1.1` | 113 | Datacurve DeepSWE live leaderboard |
 
 > [!NOTE]
 > Denominator invariant: Solve rates are always computed against suite `n_tasks` (total benchmark size), never attempted tasks.
@@ -47,12 +50,12 @@
 Pareto enforces a strict KV-first hot path (`pareto-frontier`):
 - **Canonical Key Format**:
   `explorer:<benchmarkVersionId>:cb=<costBasis>:m=<sortedModels>:h=<sortedHarnesses>:e=<sortedEfforts>`
-- **Default TB 4.0 Keys**:
-  - Reported: `explorer:01J8BV0000000000000000TB40:cb=reported:m=:h=:e=`
-  - Today: `explorer:01J8BV0000000000000000TB40:cb=today:m=:h=:e=`
 - **Default DeepSWE 1.1 Keys**:
   - Reported: `explorer:01J8BV000000000000DEEPSWE11:cb=reported:m=:h=:e=`
   - Today: `explorer:01J8BV000000000000DEEPSWE11:cb=today:m=:h=:e=`
+- **TB 4.0 Keys**:
+  - Reported: `explorer:01J8BV0000000000000000TB40:cb=reported:m=:h=:e=`
+  - Today: `explorer:01J8BV0000000000000000TB40:cb=today:m=:h=:e=`
 - **Catalog Benchmark Options Key**: `catalog:benchmark_options`
 - **Cache TTL**: 86,400 seconds (24 hours).
 - **Dual Cache Warming**: Ingestion pipeline warms both `costBasis=reported` and `costBasis=today` for all default benchmark slices.
@@ -69,9 +72,9 @@ Configured in `wrangler.jsonc`:
 ```
 
 ### Pipeline Execution Order:
-1. **Aider Polyglot**: Ingests polyglot benchmark YAML results (~260 runs).
+1. **Aider Polyglot**: Ingests polyglot benchmark YAML results.
 2. **OpenRouter Pricing Snapshot**: Ingests current pricing from `GET https://openrouter.ai/api/v1/models` (zero inference spend).
-3. **Harbor / Terminal-Bench**: Ingests TB 4.0 and TB 2.0 evaluation runs.
+3. **Harbor / Terminal-Bench**: Ingests TB 4.0 evaluation runs (18 rows, 66 tasks derived from trials).
 4. **SWE-bench Verified**: Ingests verified benchmark runs.
 5. **Datacurve DeepSWE v1.1**: Ingests live leaderboard JSON from `https://deepswe.datacurve.ai/artifacts/v1.1/leaderboard-live.json`.
 6. **Cost Restatement**: Evaluates runs with token telemetry against OpenRouter pricing snapshots and restates `cost_usd_normalized` and `cost_per_task_normalized`.
@@ -81,19 +84,29 @@ Configured in `wrangler.jsonc`:
 ```json
 {
   "status": "ok",
-  "lastRun": "2026-09-07T00:00:00.000Z",
-  "totalRuns": 366,
-  "restatedCostCount": 85,
-  "breakdown": {
-    "aider": 260,
-    "harbor": 22,
-    "swebench": 14,
-    "deepswe": 70
+  "last_job": "completed",
+  "last_job_status": "completed",
+  "lastJob": {
+    "id": "01J8JOB...",
+    "status": "completed",
+    "startedAt": "2026-09-07T00:00:00.000Z",
+    "completedAt": "2026-09-07T00:00:10.000Z",
+    "error": null
   },
+  "runCounts": {
+    "deepswe": 70,
+    "terminal-bench-2": 18,
+    "terminal-bench": 10,
+    "aider-polyglot": 69,
+    "swe-bench-verified": 184
+  },
+  "restatedCostCount": 111,
+  "reportedCostCount": 167,
+  "totalRuns": 351,
   "unmatched": {
-    "no_alias": 18,
-    "no_snapshot": 3,
-    "no_tokens": 260
+    "no_alias": 0,
+    "no_snapshot": 0,
+    "no_tokens": 240
   }
 }
 ```

@@ -38,6 +38,7 @@ export const KNOWN_MODEL_DISPLAY_NAMES: Record<string, string> = {
   "claude-opus-5": "Opus 5",
   "claude-sonnet-4-6": "Claude Sonnet 4.6",
   "claude-sonnet-5": "Sonnet 5",
+  "deepseek-r1-claude-3-5-sonnet-20241022": "DeepSeek R1 + Claude 3.5 Sonnet",
   "deepseek-v4-flash": "DeepSeek V4 Flash",
   "deepseek-v4-pro": "DeepSeek V4 Pro",
   "fable-5": "Fable 5",

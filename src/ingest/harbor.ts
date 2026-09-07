@@ -30,7 +30,21 @@ function generateDeterministicId(prefix: string, seed: string): string {
   return `${prefix}${hex}${cleanSeed}`.slice(0, 26).padEnd(26, "0");
 }
 
-export function extractHarborRowsFromHtml(html: string): HarborRow[] {
+export interface HarborPayload {
+  leaderboard?: {
+    id?: string;
+    package_id?: string;
+    package?: string;
+    name?: string;
+    title?: string;
+    description?: string;
+  };
+  rows: HarborRow[];
+  nTasks: number;
+  version: string;
+}
+
+export function extractHarborPayloadFromHtml(html: string): HarborPayload {
   const chunks: string[] = [];
   const regex = /self\.__next_f\.push\(\[1,"(.*?)"\]\)/gs;
   let match: RegExpExecArray | null;
@@ -42,9 +56,52 @@ export function extractHarborRowsFromHtml(html: string): HarborRow[] {
     }
   }
   const full = chunks.join("");
+
+  // Extract leaderboard metadata if present
+  let leaderboard: HarborPayload["leaderboard"] = undefined;
+  const lbIdx = full.indexOf("\"leaderboard\":{");
+  if (lbIdx !== -1) {
+    const jsonStart = lbIdx + "\"leaderboard\":".length;
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    let endIdx = -1;
+    for (let i = jsonStart; i < full.length; i++) {
+      const char = full[i];
+      if (escape) {
+        escape = false;
+        continue;
+      }
+      if (char === "\\") {
+        escape = true;
+        continue;
+      }
+      if (char === "\"") {
+        inString = !inString;
+        continue;
+      }
+      if (!inString) {
+        if (char === "{" || char === "[") depth++;
+        else if (char === "}" || char === "]") {
+          depth--;
+          if (depth === 0) {
+            endIdx = i + 1;
+            break;
+          }
+        }
+      }
+    }
+    if (endIdx !== -1) {
+      try {
+        leaderboard = JSON.parse(full.slice(jsonStart, endIdx));
+      } catch {}
+    }
+  }
+
+  // Extract rows array
   const rowsIdx = full.indexOf("\"rows\":[");
   if (rowsIdx === -1) {
-    return [];
+    return { leaderboard, rows: [], nTasks: 66, version: "4.0" };
   }
   const jsonStart = rowsIdx + "\"rows\":".length;
   let depth = 0;
@@ -76,12 +133,48 @@ export function extractHarborRowsFromHtml(html: string): HarborRow[] {
       }
     }
   }
-  if (endIdx === -1) return [];
+  if (endIdx === -1) return { leaderboard, rows: [], nTasks: 66, version: "4.0" };
   const rowsJson = full.slice(jsonStart, endIdx);
-  return JSON.parse(rowsJson) as HarborRow[];
+  const rows = JSON.parse(rowsJson) as HarborRow[];
+
+  // Derive version: from leaderboard.title (e.g. "Terminal-Bench 4.0" -> "4.0")
+  // or leaderboard.name (e.g. "4-0-0" -> "4.0"), defaulting to "4.0"
+  let version = "4.0";
+  if (leaderboard?.title) {
+    const match = leaderboard.title.match(/Terminal-Bench\s+([0-9.]+)/i);
+    if (match) version = match[1];
+  } else if (leaderboard?.name) {
+    version = leaderboard.name.split("-").slice(0, 2).join(".");
+  }
+
+  // Derive nTasks:
+  // Each task has pass@5 trials in Terminal-Bench eval protocol
+  // (e.g. n_trials = 330 with pass_at_5 reported => 330 / 5 = 66 tasks)
+  let nTasks = 66;
+  const sampleWithTrials = rows.find((r) => r.metrics?.n_trials);
+  if (sampleWithTrials?.metrics?.n_trials) {
+    const trials = sampleWithTrials.metrics.n_trials;
+    const maxK =
+      sampleWithTrials.metrics.pass_at_5 != null
+        ? 5
+        : sampleWithTrials.metrics.pass_at_4 != null
+          ? 4
+          : sampleWithTrials.metrics.pass_at_3 != null
+            ? 3
+            : sampleWithTrials.metrics.pass_at_2 != null
+              ? 2
+              : 1;
+    nTasks = Math.round(trials / maxK) || 66;
+  }
+
+  return { leaderboard, rows, nTasks, version };
 }
 
-export async function fetchHarborRows(url = TBENCH_URL): Promise<HarborRow[]> {
+export function extractHarborRowsFromHtml(html: string): HarborRow[] {
+  return extractHarborPayloadFromHtml(html).rows;
+}
+
+export async function fetchHarborPayload(url = TBENCH_URL): Promise<HarborPayload> {
   const res = await fetch(url, {
     headers: {
       "User-Agent": "Mozilla/5.0 (compatible; Pareto/1.0)",
@@ -92,25 +185,40 @@ export async function fetchHarborRows(url = TBENCH_URL): Promise<HarborRow[]> {
     throw new Error(`Failed to fetch from ${url}: HTTP ${res.status}`);
   }
   const html = await res.text();
-  const rows = extractHarborRowsFromHtml(html);
-  if (!rows || rows.length === 0) {
+  const payload = extractHarborPayloadFromHtml(html);
+  if (!payload.rows || payload.rows.length === 0) {
     throw new Error(`No rows found in tbench.ai response from ${url}`);
   }
-  return rows;
+  return payload;
+}
+
+export async function fetchHarborRows(url = TBENCH_URL): Promise<HarborRow[]> {
+  const payload = await fetchHarborPayload(url);
+  return payload.rows;
 }
 
 export interface IngestHarborOptions {
   d1: any;
   url?: string;
   rows?: HarborRow[];
+  payload?: HarborPayload;
 }
 
 export async function ingestHarbor({
   d1,
   url,
   rows: injectedRows,
+  payload: injectedPayload,
 }: IngestHarborOptions): Promise<{ ingestedCount: number }> {
-  const rows = injectedRows || (await fetchHarborRows(url));
+  const payload =
+    injectedPayload ||
+    (injectedRows
+      ? { rows: injectedRows, nTasks: 66, version: "4.0" }
+      : await fetchHarborPayload(url));
+  const rows = injectedRows || payload.rows;
+  const nTasks = payload.nTasks;
+  const version = payload.version;
+
   if (!rows || rows.length === 0) {
     return { ingestedCount: 0 };
   }
@@ -234,6 +342,13 @@ export async function ingestHarbor({
     resolveOrRegisterHarness(rawAgent);
   }
 
+  // Ensure benchmark_versions row matches dynamic nTasks and version from payload
+  prepStatements.push(
+    d1
+      .prepare("UPDATE benchmark_versions SET n_tasks = ?, version = ? WHERE id = ?")
+      .bind(nTasks, version, HARBOR_BENCHMARK_VERSION_ID)
+  );
+
   // Execute preparation statements first (batch of 50)
   for (let i = 0; i < prepStatements.length; i += 50) {
     const chunk = prepStatements.slice(i, i + 50);
@@ -242,7 +357,6 @@ export async function ingestHarbor({
 
   // Now construct and execute benchmark_runs statements
   const runUpsertStatements: any[] = [];
-  const nTasks = 66;
 
   for (const row of rows) {
     const rawModel = row.metadata?.model_display?.label || "Unknown Model";

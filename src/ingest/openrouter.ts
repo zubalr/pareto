@@ -72,6 +72,14 @@ export const OPENROUTER_MODEL_ALIASES: Record<string, string[]> = {
   "x-ai/grok-4.5": ["grok-4", "grok-4-5"],
   "x-ai/grok-4.6": ["grok-4-6"],
   "qwen/qwen3.8-max": ["qwen3-8-max"],
+  "z-ai/glm-5.2": ["glm-5-2"],
+  "z-ai/glm-5.3": ["glm-5-3"],
+  "z-ai/glm-5.3-flash": ["glm-5-3-flash"],
+  "moonshotai/kimi-k2.7-code": ["kimi-k2-7-code"],
+  "meta/muse-spark-1.1": ["muse-spark-1-1"],
+  "meta/muse-spark-1.2": ["muse-spark-1-2"],
+  "qwen/qwen3-235b-a22b-2507": ["qwen3-235b-a22b-diff-no-think-alibaba-api"],
+  "qwen/qwen3-235b-a22b": ["qwen3-235b-a22b-diff-no-think-alibaba-api"],
 };
 
 export interface IngestOpenRouterOptions {
@@ -103,12 +111,22 @@ export async function ingestOpenRouterPricing(
     displayNameToModelId.set(m.display_name.toLowerCase(), m.id);
   }
 
-  const aliasToModelId = new Map<string, string>();
-  for (const a of (aliasesRes.results || []) as Array<{ model_id: string; alias: string }>) {
-    aliasToModelId.set(a.alias.toLowerCase(), a.model_id);
+  const aliasToModelIds = new Map<string, Set<string>>();
+  function addAliasModel(key: string, modelId: string) {
+    const k = key.toLowerCase();
+    let set = aliasToModelIds.get(k);
+    if (!set) {
+      set = new Set();
+      aliasToModelIds.set(k, set);
+    }
+    set.add(modelId);
   }
 
-  // Pre-seed known OpenRouter aliases into aliasToModelId and D1 if model exists
+  for (const a of (aliasesRes.results || []) as Array<{ model_id: string; alias: string }>) {
+    addAliasModel(a.alias, a.model_id);
+  }
+
+  // Pre-seed known OpenRouter aliases into aliasToModelIds and D1 if model exists
   const extraAliasStatements: any[] = [];
   for (const [orId, targetSlugs] of Object.entries(OPENROUTER_MODEL_ALIASES)) {
     for (const targetSlug of targetSlugs) {
@@ -116,13 +134,24 @@ export async function ingestOpenRouterPricing(
       if (modelId) {
         const fullLower = orId.toLowerCase();
         const bareLower = fullLower.replace(/^[^/]+\//, "");
-        aliasToModelId.set(fullLower, modelId);
-        aliasToModelId.set(bareLower, modelId);
+        addAliasModel(fullLower, modelId);
+        addAliasModel(bareLower, modelId);
 
+        // Insert base orId alias
         extraAliasStatements.push(
           d1
             .prepare("INSERT OR IGNORE INTO model_aliases (id, model_id, alias) VALUES (?, ?, ?)")
             .bind(generateDeterministicId("01J8AL", `${modelId}:${orId}`), modelId, orId)
+        );
+        // Also insert variant alias with slash so each distinct model variant has a valid slash alias
+        extraAliasStatements.push(
+          d1
+            .prepare("INSERT OR IGNORE INTO model_aliases (id, model_id, alias) VALUES (?, ?, ?)")
+            .bind(
+              generateDeterministicId("01J8AL", `${modelId}:${targetSlug}`),
+              modelId,
+              `${orId}:${targetSlug}`
+            )
         );
       }
     }
@@ -170,14 +199,20 @@ export async function ingestOpenRouterPricing(
     const nameLower = orModel.name?.toLowerCase();
 
     // Match priority: exact alias -> bare alias -> exact slug -> bare slug -> display name
-    const modelId =
-      aliasToModelId.get(fullId) ||
-      aliasToModelId.get(bareId) ||
-      slugToModelId.get(bareId) ||
-      slugToModelId.get(fullId) ||
-      (nameLower ? displayNameToModelId.get(nameLower) : undefined);
+    const targetModelIds = new Set<string>();
+    for (const key of [fullId, bareId, nameLower]) {
+      if (!key) continue;
+      const ids = aliasToModelIds.get(key);
+      if (ids) {
+        for (const id of ids) targetModelIds.add(id);
+      }
+      const slugId = slugToModelId.get(key);
+      if (slugId) targetModelIds.add(slugId);
+      const dispId = displayNameToModelId.get(key);
+      if (dispId) targetModelIds.add(dispId);
+    }
 
-    if (modelId) {
+    for (const modelId of targetModelIds) {
       // Don't overwrite if standard non-batch variant already matched
       if (!matchedSnapshots.has(modelId) || !fullId.includes(":batch")) {
         matchedSnapshots.set(modelId, {

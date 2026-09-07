@@ -81,6 +81,21 @@ describe("Harbor / Terminal-Bench Ingest Transforms", () => {
     expect(rows[0].metrics?.total_cost_usd).toBe(3267.18);
     expect(rows[0].metrics?.pass_at_2).toBe(0.6485);
   });
+
+  it("extracts full payload, deriving version and nTasks dynamically from n_trials and pass@5", async () => {
+    const { extractHarborPayloadFromHtml } = await import("../src/ingest/harbor");
+    const mockHtml = `
+      <!DOCTYPE html><html><body>
+      <script>self.__next_f.push([1,"1:{\\"leaderboard\\":{\\"id\\":\\"tb-test-id\\",\\"name\\":\\"4-0-0\\",\\"title\\":\\"Terminal-Bench 4.0\\"},\\"rows\\":[{\\"id\\":\\"row-1\\",\\"metrics\\":{\\"accuracy\\":58.18,\\"n_trials\\":330,\\"pass_at_5\\":0.7121,\\"successes\\":192}}]}"])</script>
+      </body></html>
+    `;
+    const payload = extractHarborPayloadFromHtml(mockHtml);
+    expect(payload.version).toBe("4.0");
+    expect(payload.nTasks).toBe(66); // 330 trials / 5 attempts = 66 tasks
+    expect(payload.leaderboard?.title).toBe("Terminal-Bench 4.0");
+    expect(payload.rows.length).toBe(1);
+    expect(payload.rows[0].id).toBe("row-1");
+  });
 });
 
 describe("SWE-bench Ingest Transforms", () => {

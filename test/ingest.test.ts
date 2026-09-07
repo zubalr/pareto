@@ -90,7 +90,7 @@ describe("Harbor / Terminal-Bench Ingest Transforms", () => {
       </body></html>
     `;
     const payload = extractHarborPayloadFromHtml(mockHtml);
-    expect(payload.version).toBe("4.0");
+    expect(payload.version).toBe("2.0");
     expect(payload.nTasks).toBe(66); // 330 trials / 5 attempts = 66 tasks
     expect(payload.leaderboard?.title).toBe("Terminal-Bench 4.0");
     expect(payload.rows.length).toBe(1);

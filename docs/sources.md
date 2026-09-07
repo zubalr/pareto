@@ -100,7 +100,7 @@ Ground rules for every adapter, inherited from `AGENTS.md`:
   - `src/ingest/harbor.ts` extracts `nTasks` dynamically from `n_trials / maxK` instead of hardcoding a magic 66.
 - **Benchmark Version:**
   - Upstream package: `terminal-bench/terminal-bench`, `name: "4-0-0"`, `title: "Terminal-Bench 4.0"`.
-  - Version derived as `"4.0"`.
+  - In Pareto's catalog schema, Harbor runs are cataloged under benchmark version `2.0` (`01J8BV000000000000000TB20`, slug `terminal-bench-2`) to keep it distinct from the seed Terminal-Bench 4.0 compiled archive (`01J8BV0000000000000000TB40`).
 - **License / attribution:** Apache-2.0 (terminal-bench and terminal-bench-science repos). Hosted by Harbor / Laude Institute; leaderboard rows are maintainer-verified runs ("A Terminal-Bench team member ran the evaluation and verified the results") → `sourceOfficial = 1`.
 - **Mappable fields → `benchmark_runs`:**
   | Source | Target |

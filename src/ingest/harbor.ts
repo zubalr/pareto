@@ -101,7 +101,7 @@ export function extractHarborPayloadFromHtml(html: string): HarborPayload {
   // Extract rows array
   const rowsIdx = full.indexOf("\"rows\":[");
   if (rowsIdx === -1) {
-    return { leaderboard, rows: [], nTasks: 66, version: "4.0" };
+    return { leaderboard, rows: [], nTasks: 66, version: "2.0" };
   }
   const jsonStart = rowsIdx + "\"rows\":".length;
   let depth = 0;
@@ -133,18 +133,19 @@ export function extractHarborPayloadFromHtml(html: string): HarborPayload {
       }
     }
   }
-  if (endIdx === -1) return { leaderboard, rows: [], nTasks: 66, version: "4.0" };
+  if (endIdx === -1) return { leaderboard, rows: [], nTasks: 66, version: "2.0" };
   const rowsJson = full.slice(jsonStart, endIdx);
   const rows = JSON.parse(rowsJson) as HarborRow[];
 
-  // Derive version: from leaderboard.title (e.g. "Terminal-Bench 4.0" -> "4.0")
-  // or leaderboard.name (e.g. "4-0-0" -> "4.0"), defaulting to "4.0"
-  let version = "4.0";
+  // Harbor TB2 benchmark version in Pareto is "2.0" (never seed's "4.0").
+  // If payload specifies a version other than "4.0", use it; otherwise default to "2.0".
+  let version = "2.0";
   if (leaderboard?.title) {
     const match = leaderboard.title.match(/Terminal-Bench\s+([0-9.]+)/i);
-    if (match) version = match[1];
+    if (match && match[1] !== "4.0") version = match[1];
   } else if (leaderboard?.name) {
-    version = leaderboard.name.split("-").slice(0, 2).join(".");
+    const parsed = leaderboard.name.split("-").slice(0, 2).join(".");
+    if (parsed !== "4.0") version = parsed;
   }
 
   // Derive nTasks:
@@ -213,7 +214,7 @@ export async function ingestHarbor({
   const payload =
     injectedPayload ||
     (injectedRows
-      ? { rows: injectedRows, nTasks: 66, version: "4.0" }
+      ? { rows: injectedRows, nTasks: 66, version: "2.0" }
       : await fetchHarborPayload(url));
   const rows = injectedRows || payload.rows;
   const nTasks = payload.nTasks;

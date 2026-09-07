@@ -2,10 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import * as React from "react";
 
 export const Route = createFileRoute("/methodology")({
+  head: () => ({ title: "Methodology · Pareto" }),
   component: MethodologyPage,
 });
 
-function Section({
+function Section(
+  {
   n,
   title,
   accent,

@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-router";
 import * as React from "react";
 import appCss from "../styles/app.css?url";
+import { ThemeToggle } from "../components/ThemeToggle";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -41,6 +42,11 @@ export const Route = createRootRoute({
       },
       { name: "twitter:image", content: "https://pareto.jubairjashim1975.workers.dev/og.png" },
     ],
+    scripts: [
+      {
+        children: `(function(){try{var u=new URLSearchParams(location.search).get('theme');var k='pareto-theme';var p=u||localStorage.getItem(k)||'dark';if(u)localStorage.setItem(k,p);var d=p==='system'?!window.matchMedia('(prefers-color-scheme: light)').matches:p!=='light';var r=document.documentElement;r.classList.toggle('dark',d);r.classList.toggle('light',!d);r.style.colorScheme=d?'dark':'light';}catch(e){}})();`,
+      },
+    ],
     links: [
       { rel: "stylesheet", href: appCss },
       {
@@ -54,11 +60,12 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   return (
-    <html lang="en" className="dark h-full bg-[#09090b] text-[#f4f4f5]">
+    <html lang="en" className="dark h-full bg-zinc-950 text-zinc-100">
       <head>
         <HeadContent />
       </head>
-      <body className="min-h-full flex flex-col font-mono text-xs antialiased bg-[#09090b] text-[#f4f4f5]">
+      <body className="min-h-full flex flex-col font-mono text-xs antialiased bg-zinc-950 text-zinc-100">
+        <a href="#main" className="skip-link">Skip to content</a>
         <header className="border-b border-zinc-800/80 bg-zinc-950/80 sticky top-0 z-40 px-4 py-2 flex items-center justify-between backdrop-blur">
           <div className="flex items-center gap-6">
             <Link to="/" className="flex items-center gap-2 text-zinc-100 hover:text-white group">
@@ -106,12 +113,13 @@ function RootComponent() {
           </div>
 
           <div className="flex items-center gap-3 text-zinc-500 text-[11px]">
+            <ThemeToggle />
             <span className="hidden sm:inline-block">Host: Cloudflare Workers + D1</span>
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" title="Connected" />
           </div>
         </header>
 
-        <main className="flex-1 flex flex-col min-h-0">
+        <main id="main" className="flex-1 flex flex-col min-h-0">
           <Outlet />
         </main>
 

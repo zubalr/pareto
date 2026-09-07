@@ -402,6 +402,7 @@ export const getCompareData = createServerFn()
     ids?: string[];
     slugs?: string[];
     costBasis?: "reported" | "today";
+    effortMatch?: "all" | "max" | "xhigh";
   }) => input)
   .handler(async ({ data }): Promise<CompareResponse> => {
     try {

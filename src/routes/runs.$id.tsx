@@ -9,6 +9,7 @@ type RunDossierSearch = {
 };
 
 export const Route = createFileRoute("/runs/$id")({
+  head: () => ({ title: "Run · Pareto" }),
   validateSearch: (search: Record<string, unknown>): RunDossierSearch => ({
     pins:
       search.pins === undefined || search.pins === null ? undefined : String(search.pins),
@@ -28,7 +29,7 @@ export const Route = createFileRoute("/runs/$id")({
 function RunNotFound() {
   const { id } = Route.useParams();
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-3 bg-[#09090b] p-8 text-center">
+    <div className="flex-1 flex flex-col items-center justify-center gap-3 bg-zinc-950 p-8 text-center">
       <FileText size={28} className="text-zinc-700" />
       <h1 className="text-base font-bold text-zinc-300 font-mono">
         404 — no run with id <span className="text-zinc-100">{id}</span>
@@ -135,7 +136,7 @@ function RunDossierPage() {
   const passK = parsePassAtK(run.passAtK);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-[#09090b]">
+    <div className="flex-1 flex flex-col min-h-0 bg-zinc-950">
       <div className="bg-zinc-900/90 border-b border-zinc-800 px-4 py-1.5 text-[11px] flex items-center justify-between gap-4 text-zinc-400">
         <div className="flex items-center gap-2">
           <span className="text-amber-400 font-bold tracking-wide">NOTE</span>

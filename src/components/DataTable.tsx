@@ -9,7 +9,23 @@ import {
 } from "@tanstack/react-table";
 import { Pin } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { buildRunsCsv } from "../theme";
 import type { ExplorerRun } from "../server/functions";
+
+export type Density = "compact" | "comfortable";
+
+const PAGE_SIZE = 50;
+
+function downloadCsv(rows: ExplorerRun[]) {
+  const csv = buildRunsCsv(rows);
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "pareto-slice.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 interface DataTableProps {
   data: ExplorerRun[];
@@ -18,6 +34,8 @@ interface DataTableProps {
   onSelectPin: (id: string | null) => void;
   onHoverRow: (id: string | null) => void;
   costBasis: "reported" | "today";
+  density?: Density;
+  onDensityChange?: (d: Density) => void;
 }
 
 const columnHelper = createColumnHelper<ExplorerRun>();
@@ -27,8 +45,8 @@ const columnHelper = createColumnHelper<ExplorerRun>();
 const ROW_BG = {
   base: "bg-zinc-950",
   hover: "bg-zinc-900",
-  pinned: "bg-[#221804]",
-  knee: "bg-[#0c1a1e]",
+  pinned: "row-pinned",
+  knee: "row-knee",
 } as const;
 
 function StatusBadge({ run }: { run: ExplorerRun }) {
@@ -87,12 +105,18 @@ export function DataTable({
   onSelectPin,
   onHoverRow,
   costBasis,
+  density = "compact",
+  onDensityChange,
 }: DataTableProps) {
   // Default order: knee → frontier → dominated, solve rate descending within tiers.
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: "rank", desc: true },
     { id: "solveRate", desc: true },
   ]);
+  const [pageIndex, setPageIndex] = React.useState(0);
+  React.useEffect(() => setPageIndex(0), [data.length, sorting, density]);
+  const pad = density === "comfortable" ? "py-3" : "py-2";
+  const cellText = density === "comfortable" ? "text-[13px]" : "text-xs";
 
   const columns = React.useMemo(
     () => [
@@ -278,6 +302,52 @@ export function DataTable({
             {data.length} visible · {data.filter((r) => r.isFrontier).length} on frontier
           </span>
         </div>
+        <div className="flex items-center gap-2">
+          {onDensityChange && (
+            <select
+              value={density}
+              onChange={(e) => onDensityChange(e.target.value as Density)}
+              aria-label="Table density"
+              className="bg-zinc-900 border border-zinc-700 text-zinc-300 rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 cursor-pointer"
+            >
+              <option value="compact">compact</option>
+              <option value="comfortable">comfortable</option>
+            </select>
+          )}
+          <button
+            type="button"
+            onClick={() => downloadCsv(table.getRowModel().rows.map((r) => r.original))}
+            className="px-2 py-0.5 rounded border border-zinc-700 text-zinc-300 hover:bg-zinc-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+            title="Download the visible rows as CSV (aggregates only)"
+          >
+            Export CSV
+          </button>
+          {data.length > PAGE_SIZE && (
+            <div className="flex items-center gap-1.5 font-mono">
+              <button
+                type="button"
+                onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+                disabled={pageIndex === 0}
+                className="px-1.5 py-0.5 rounded border border-zinc-700 disabled:opacity-40 hover:bg-zinc-900"
+              >
+                ‹
+              </button>
+              <span>
+                {pageIndex + 1}/{Math.ceil(data.length / PAGE_SIZE)}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setPageIndex((p) => Math.min(Math.ceil(data.length / PAGE_SIZE) - 1, p + 1))
+                }
+                disabled={pageIndex >= Math.ceil(data.length / PAGE_SIZE) - 1}
+                className="px-1.5 py-0.5 rounded border border-zinc-700 disabled:opacity-40 hover:bg-zinc-900"
+              >
+                ›
+              </button>
+            </div>
+          )}
+        </div>
         <div className="text-zinc-500 text-[11px]">
           Hover row to highlight on chart · click row to pin
         </div>
@@ -318,7 +388,9 @@ export function DataTable({
             ))}
           </thead>
           <tbody className="divide-y divide-zinc-800/60 text-zinc-300">
-            {table.getRowModel().rows.map((row) => {
+            {table.getRowModel().rows
+              .slice(pageIndex * PAGE_SIZE, pageIndex * PAGE_SIZE + PAGE_SIZE)
+              .map((row) => {
               const run = row.original;
               const isPinned = pinnedIds.includes(run.id);
               const isHovered = hoveredId === run.id;
@@ -327,7 +399,7 @@ export function DataTable({
               return (
                 <tr
                   key={row.id}
-                  className={`${bg} transition-colors cursor-pointer ${
+                  className={`${bg} transition-colors cursor-pointer focus-within:ring-1 focus-within:ring-emerald-400/60 ${
                     isPinned ? "border-l-2 border-l-amber-500" : ""
                   }`}
                   onClick={() => onSelectPin(run.id)}
@@ -339,7 +411,7 @@ export function DataTable({
                     return (
                       <td
                         key={cell.id}
-                        className={`px-3 py-2 whitespace-nowrap ${isConfig ? "sticky left-0 border-r border-zinc-800/60" : ""}`}
+                        className={`px-3 ${pad} ${cellText} whitespace-nowrap ${isConfig ? "sticky left-0 border-r border-zinc-800/60" : ""}`}
                         style={isConfig ? { background: "inherit" } : undefined}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}

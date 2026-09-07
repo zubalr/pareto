@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Activity } from "lucide-react";
-import { parseHealthPayload, IngestHealth } from "../ingestHealth";
+import { parseHealthPayload, relativeTime, type IngestHealth } from "../ingestHealth";
 
 // Thin ingest-health strip for the Explorer. Data comes from Agy's
 // /api/ingest/health — a 404 or unparseable body renders an honest empty state
@@ -9,6 +9,8 @@ export function IngestHealthStrip() {
   const [health, setHealth] = React.useState<IngestHealth | null>(null);
   const [endpointMissing, setEndpointMissing] = React.useState(false);
   const [dismissed, setDismissed] = React.useState(false);
+  const [startedAt, setStartedAt] = React.useState<string | null>(null);
+  const [ago, setAgo] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let alive = true;
@@ -29,6 +31,12 @@ export function IngestHealthStrip() {
           return;
         }
         setHealth(parseHealthPayload(json));
+        const job = (json as any)?.lastJob;
+        const startedAt = job?.startedAt;
+        if (typeof startedAt === "string") {
+          setStartedAt(startedAt);
+          setAgo(relativeTime(startedAt));
+        }
       } catch {
         if (alive) setEndpointMissing(true);
       }
@@ -74,6 +82,11 @@ export function IngestHealthStrip() {
       <Activity size={10} className={health.errored ? "text-red-400" : "text-emerald-500"} />
       <span className="uppercase tracking-wider text-zinc-500">ingest</span>
       <span>{health.statusLabel}</span>
+      {ago && (
+        <span title={startedAt ?? undefined} className="text-zinc-500">
+          · {ago}
+        </span>
+      )}
       {health.counts && (
         <span className="text-zinc-500">
           · cost coverage: {health.counts.reported ?? "?"} reported /{" "}

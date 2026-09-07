@@ -464,3 +464,34 @@ removed. Production SSR re-verified after deploy.**
 | 80 | SSR regression hunt: the Explorer colorBy legend + the model cross-bench section both silently suspended SSR (`<!--$!-->` empty main). Explorer fixed (component-scope `useMemo` for category maps); model page fixed (single server fn per loader — the two-parallel-`createServerFn` pattern left one promise unsettled on Workers; index query folded into `getModelData`) | FIXED |
 | 81 | Model page defaults mirror the Explorer default (DeepSWE first, TB 4.0 archive second) — "Unknown model" on the default bench can no longer happen for a valid slug | FIXED |
 | 82 | Selector during Agy's data churn: TB20 row temporarily surfaced as "Terminal-Bench 4.0" (Agy renamed/migrated mid-QA); `benchLabel` cannot disambiguate a data-level rename — Agy lane | NOTE |
+
+### Phase 10 — craft pass QA (production `ddbdd1ce`+, 2026-09-07)
+
+Shipped: theme system (`?theme=` + localStorage + header toggle; light token
+inversion via Tailwind v4 `--color-zinc-*` overrides with darkened accents;
+ECharts init theme + palettes follow; reduced-motion kills chart animation),
+a11y (skip link to `#main`, drawer focus-trap + Esc, `/` focuses model search,
+focus rings on chips/tabs/buttons), share/export (Copy view URL, Export CSV of
+the visible slice), density param (`density=compact|comfortable`), table
+pagination (50/page), frontier-first model filter ordering, Compare
+`effortMatch` + sticky config column, louder Finder best-fit card, collapsible
+"How to read this" onboarding (dismiss-once in localStorage), per-route titles,
+relative last-ingest time.
+
+| # | Check (production) | Result |
+|---|---|---|
+| 83 | Theme toggle: light/dark/system segmented in header; light inverts surfaces + darkens accents (no grey-on-white); ECharts re-inits with the light palette; boot script applies pre-paint from `?theme=` or localStorage | PASS |
+| 84 | Theme round-trip: `saveTheme` → `getThemePref` → `resolveTheme("system")` follows OS (unit-tested with stubbed storage/matchMedia) | PASS |
+| 85 | Skip link to `#main` (visible on focus); drawer focus-trap + Esc close on Explorer and Finder | PASS |
+| 86 | `/` focuses the model search (ignores typing contexts); visible focus rings on chips, tabs, density select, table buttons | PASS |
+| 87 | Copy view URL: copies the current search string with button-text confirm | PASS |
+| 88 | Export CSV: header row (model, harness, effort, solve, $ reported, $ today, 5 coverage flags, sourceRunId) — unit-tested incl. quoting + empty-for-missing price; no task text columns | PASS |
+| 89 | Density: `density=comfortable` → 13px rows + more padding; compact default; round-trips | PASS |
+| 90 | Model filter order: frontier/knee members first, then best solve desc (search preserved) | PASS |
+| 91 | Compare: effortMatch honored server-side when navigated with it; sticky config column; type floor | PASS |
+| 92 | Finder best-fit card visually louder (larger title/solve, cyan ring) with real `sourceRunId` provenance | PASS |
+| 93 | How-to-read collapsible under the chart; dismiss-once persists in localStorage | PASS |
+| 94 | Per-route titles (Explorer bench-aware, Finder, Compare, Model, Run, Methodology); relative last-ingest time ("29m ago") from health `startedAt` | PASS |
+| 95 | DeepSWE 70-row table paginates (50/page) — no frozen tab; SWE 184-row slice paginates the same | PASS |
+| 96 | Reduced motion: chart animation 0 + CSS transitions killed under `prefers-reduced-motion` | PASS |
+| 97 | `pnpm test --run` | PASS (81 incl. theme/csv/density/relative-time suites) |

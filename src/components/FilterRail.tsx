@@ -106,11 +106,13 @@ function ChipListSection({
           <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-zinc-500" />
           <input
             type="text"
+            id={label === "Models" ? "model-search" : undefined}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={`Search ${label.toLowerCase()}…`}
             aria-label={`Search ${label.toLowerCase()}`}
-            className="w-full bg-zinc-900 border border-zinc-700/80 text-zinc-100 rounded px-2 py-1 pl-6 text-xs focus:outline-none focus:border-emerald-500 placeholder:text-zinc-500"
+            title={label === "Models" ? "Press / to search" : undefined}
+            className="w-full bg-zinc-900 border border-zinc-700/80 text-zinc-100 rounded px-2 py-1 pl-6 text-xs focus:outline-none focus:border-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-400/60 placeholder:text-zinc-500"
           />
         </div>
       )}
@@ -121,7 +123,7 @@ function ChipListSection({
               key={o.slug}
               type="button"
               onClick={() => onToggle(o.slug)}
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-[11px] font-mono hover:bg-emerald-950/90 transition-colors"
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-[11px] font-mono hover:bg-emerald-950/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
               title="Click to remove"
             >
               {upperCaseOptions ? o.name.toUpperCase() : o.name}

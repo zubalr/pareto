@@ -7,8 +7,9 @@ import { ParetoChart } from "../components/ParetoChart";
 import { PassAtKChart, EffortChart, ResourceChart } from "../components/ChartSlots";
 import { DataTable } from "../components/DataTable";
 import { FilterRail, type EffortMatch, benchLabel } from "../components/FilterRail";
+import { parseDensity } from "../theme";
 import { IngestHealthStrip } from "../components/IngestHealthStrip";
-import type { ExplorerRun } from "../server/functions";
+import type { ExplorerRun, FilterOption } from "../server/functions";
 
 const searchSchema = z.object({
   benchmark: z.string().optional(),
@@ -20,11 +21,16 @@ const searchSchema = z.object({
   chart: z.enum(["pareto", "passk", "effort", "resources"]).optional(),
   effortMatch: z.enum(["all", "max", "xhigh"]).optional(),
   colorBy: z.enum(["harness", "effort", "none"]).optional(),
+  density: z.enum(["compact", "comfortable"]).optional(),
 });
 
 export type ExplorerSearch = z.infer<typeof searchSchema>;
 
 export const Route = createFileRoute("/")({
+  head: (ctx: any) => {
+    const bench = ctx?.loaderData?.currentBenchmark?.benchmarkName;
+    return { title: bench ? `${bench} · Pareto` : "Explorer · Pareto" };
+  },
   validateSearch: (search: Record<string, unknown>): ExplorerSearch => {
     // Coerce potential string parameters into array if single item was passed in query
     const coerceArray = (val: unknown): string[] | undefined => {
@@ -53,10 +59,12 @@ export const Route = createFileRoute("/")({
         search.effortMatch === "max" || search.effortMatch === "xhigh"
           ? search.effortMatch
           : undefined,
+      density: search.density === "comfortable" ? "comfortable" : "compact",
       colorBy:
         search.colorBy === "effort" || search.colorBy === "none" || search.colorBy === "harness"
           ? search.colorBy
           : undefined,
+      density: parseDensity(search.density),
     };
   },
   loaderDeps: ({ search }) => ({ search }),
@@ -119,6 +127,73 @@ function KneeNextStep({ frontier, knee }: { frontier: ExplorerRun[]; knee: Explo
       </span>{" "}
       ({next.modelDisplayName})
     </span>
+  );
+}
+
+function HowToRead() {
+  const [open, setOpen] = React.useState(() => {
+    try {
+      return window.localStorage.getItem("pareto-howto") !== "dismissed";
+    } catch {
+      return true;
+    }
+  });
+  const dismiss = () => {
+    setOpen(false);
+    try {
+      window.localStorage.setItem("pareto-howto", "dismissed");
+    } catch {}
+  };
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="self-start text-[11px] text-zinc-400 hover:text-zinc-200 underline"
+      >
+        How to read this
+      </button>
+    );
+  }
+  return (
+    <div className="bg-zinc-950 border border-zinc-800/80 rounded px-3 py-2 text-[11px] text-zinc-300 flex flex-col gap-1 relative">
+      <button
+        type="button"
+        onClick={dismiss}
+        aria-label="Dismiss how-to-read"
+        className="absolute right-2 top-2 text-zinc-500 hover:text-zinc-300"
+      >
+        ✕
+      </button>
+      <span className="uppercase tracking-wider text-zinc-400 font-semibold">
+        How to read this
+      </span>
+      <ul className="list-disc list-inside space-y-0.5 text-zinc-400">
+        <li>
+          x = <span className="text-zinc-200">USD per task</span> (log scale) · y ={" "}
+          <span className="text-zinc-200">solve rate %</span> of the full suite.
+        </li>
+        <li>
+          <span className="text-emerald-400">Green polyline</span> = Pareto frontier (undominated
+          configs) · <span className="text-cyan-400">cyan dot</span> = knee (best trade-off).
+        </li>
+        <li>
+          <span className="text-zinc-500">Grey dots</span> = dominated configurations — quieter on
+          purpose.
+        </li>
+        <li>
+          <span className="text-zinc-200">One benchmark per board</span> — the selector switches
+          the whole chart.
+        </li>
+      </ul>
+      <button
+        type="button"
+        onClick={dismiss}
+        className="self-start text-[11px] text-zinc-500 hover:text-zinc-300 underline"
+      >
+        Got it — don't show again
+      </button>
+    </div>
   );
 }
 
@@ -194,6 +269,35 @@ function ExplorerPage() {
 
   const [hoveredId, setHoveredId] = React.useState<string | null>(null);
   const [railOpen, setRailOpen] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
+
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const typing =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable);
+      if (e.key === "/" && !typing) {
+        e.preventDefault();
+        document.getElementById("model-search")?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const copyViewUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
 
   const selectedBenchmarkId =
     search.benchmark || (data.currentBenchmark ? data.currentBenchmark.id : undefined);
@@ -323,6 +427,32 @@ function ExplorerPage() {
     pinnedIds.length > 0;
 
   const plottedRuns = data.allRuns.filter((r) => r.hasCost && r.cost !== null && r.cost > 0);
+
+  // Model filter order: frontier/knee members first, then best solve desc, then
+  // alphabetical — the models a researcher cares about are never 20 kebabs deep.
+  const orderedModels: FilterOption[] = React.useMemo(() => {
+    const acc = new Map<string, { rank: number; solve: number; opt: FilterOption }>();
+    for (const r of data.allRuns) {
+      const rank = r.isKnee ? 3 : r.isFrontier ? 2 : 0;
+      const cur = acc.get(r.modelSlug);
+      if (!cur) {
+        acc.set(r.modelSlug, {
+          rank,
+          solve: r.solveRate,
+          opt: { id: r.modelId, name: r.modelDisplayName, slug: r.modelSlug },
+        });
+      } else {
+        cur.rank = Math.max(cur.rank, rank);
+        cur.solve = Math.max(cur.solve, r.solveRate);
+      }
+    }
+    return [...acc.values()]
+      .sort(
+        (a, b) =>
+          b.rank - a.rank || b.solve - a.solve || a.opt.name.localeCompare(b.opt.name)
+      )
+      .map((v) => v.opt);
+  }, [data.allRuns]);
   const knee = data.kneePoint;
   const passKReady = data.allRuns.some((r) => r.hasPassAtK);
   const effortPairCount = (() => {
@@ -342,7 +472,7 @@ function ExplorerPage() {
   const sliceIsPureSeedMix = seedRows > 0;
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-[#09090b]">
+    <div className="flex-1 flex flex-col min-h-0 bg-zinc-950">
       {/* Composition-aware notice banner: seed disclaimer only on seed-containing slices */}
       <div className="bg-zinc-900/90 border-b border-zinc-800 px-4 py-1.5 text-[11px] flex items-center justify-between gap-4 text-zinc-400">
         <div className="flex items-center gap-2">
@@ -390,9 +520,13 @@ function ExplorerPage() {
           )}
           <span>no benchmark task text stored</span>
           <span>&bull;</span>
-          <a href="/methodology" className="underline hover:text-zinc-300">
-            methodology
-          </a>
+          <button
+            type="button"
+            onClick={copyViewUrl}
+            className="underline hover:text-zinc-300 text-zinc-300"
+          >
+            {copied ? "URL copied ✓" : "Copy view URL"}
+          </button>
         </div>
       </div>
 
@@ -408,6 +542,33 @@ function ExplorerPage() {
           />
         )}
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Filters"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setRailOpen(false);
+              return;
+            }
+            if (e.key === "Tab") {
+              const drawer = e.currentTarget as HTMLElement;
+              const focusables = Array.from(
+                drawer.querySelectorAll<HTMLElement>(
+                  'a[href], button:not([disabled]), input:not([type=hidden]), select, textarea'
+                )
+              );
+              if (focusables.length === 0) return;
+              const first = focusables[0];
+              const last = focusables[focusables.length - 1];
+              if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+              } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+              }
+            }
+          }}
           className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] overflow-y-auto shadow-2xl transition-transform duration-200 lg:contents lg:shadow-none ${
             railOpen ? "translate-x-0" : "-translate-x-full"
           }`}
@@ -429,7 +590,7 @@ function ExplorerPage() {
           benchmarks={data.benchmarkOptions}
           selectedBenchmarkId={selectedBenchmarkId}
           onSelectBenchmark={handleSelectBenchmark}
-          models={data.availableModels}
+          models={orderedModels}
           selectedModels={selectedModels}
           onToggleModel={handleToggleModel}
           harnesses={data.availableHarnesses}
@@ -532,8 +693,9 @@ function ExplorerPage() {
                     ids: pinnedIds.join(","),
                     benchmark: selectedBenchmarkId || undefined,
                     costBasis: costBasis === "today" ? "today" : undefined,
+                    effortMatch: search.effortMatch,
                   }}
-                  className="px-2.5 py-1 rounded text-[11px] bg-cyan-950/40 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-950/60 transition-colors inline-flex items-center gap-1.5"
+                  className="px-2.5 py-1 rounded text-[11px] bg-cyan-950/40 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-950/60 transition-colors inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
                 >
                   <Columns3 size={11} />
                   Compare pins ({pinnedIds.length})
@@ -560,6 +722,8 @@ function ExplorerPage() {
               </span>
             </div>
           </div>
+
+          <HowToRead />
 
           {chartSlot === "pareto" && (
             <ParetoChart
@@ -593,6 +757,13 @@ function ExplorerPage() {
             onSelectPin={handleSelectPin}
             onHoverRow={setHoveredId}
             costBasis={costBasis}
+            density={search.density ?? "compact"}
+            onDensityChange={(d) =>
+              updateSearch((prev) => ({
+                ...prev,
+                density: d === "compact" ? undefined : d,
+              }))
+            }
           />
         </div>
       </div>

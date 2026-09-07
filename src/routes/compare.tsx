@@ -5,6 +5,7 @@ import { Columns3 } from "lucide-react";
 import { getCompareData } from "../server/functions";
 import type { ExplorerRun } from "../server/functions";
 import { parseListParam } from "../compare";
+import { parseDensity } from "../theme";
 import { benchLabel } from "../components/FilterRail";
 
 const searchSchema = z.object({
@@ -12,11 +13,13 @@ const searchSchema = z.object({
   ids: z.string().optional(),
   slugs: z.string().optional(),
   costBasis: z.enum(["reported", "today"]).optional(),
+  effortMatch: z.enum(["all", "max", "xhigh"]).optional(),
 });
 
 export type CompareSearch = z.infer<typeof searchSchema>;
 
 export const Route = createFileRoute("/compare")({
+  head: () => ({ title: "Compare · Pareto" }),
   validateSearch: (search: Record<string, unknown>): CompareSearch => {
     const coerceString = (v: unknown): string | undefined =>
       v === undefined || v === null ? undefined : String(v);
@@ -25,6 +28,10 @@ export const Route = createFileRoute("/compare")({
       ids: coerceString(search.ids),
       slugs: coerceString(search.slugs),
       costBasis: search.costBasis === "today" ? "today" : "reported",
+      effortMatch:
+        search.effortMatch === "max" || search.effortMatch === "xhigh"
+          ? search.effortMatch
+          : undefined,
     };
   },
   loaderDeps: ({ search }) => ({
@@ -32,6 +39,7 @@ export const Route = createFileRoute("/compare")({
     ids: search.ids,
     slugs: search.slugs,
     costBasis: search.costBasis,
+    effortMatch: search.effortMatch,
   }),
   loader: async ({ deps }) => {
     return await getCompareData({
@@ -40,6 +48,10 @@ export const Route = createFileRoute("/compare")({
         ids: parseListParam(deps.ids),
         slugs: parseListParam(deps.slugs),
         costBasis: deps.costBasis === "today" ? "today" : "reported",
+        effortMatch:
+          deps.effortMatch === "max" || deps.effortMatch === "xhigh"
+            ? deps.effortMatch
+            : "all",
       },
     });
   },
@@ -136,7 +148,7 @@ function ComparePage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-[#09090b]">
+    <div className="flex-1 flex flex-col min-h-0 bg-zinc-950">
       <div className="bg-zinc-900/90 border-b border-zinc-800 px-4 py-1.5 text-[11px] flex items-center justify-between gap-4 text-zinc-400">
         <div className="flex items-center gap-2">
           <span className="text-amber-400 font-bold tracking-wide">NOTE</span>
@@ -275,10 +287,10 @@ function ComparePage() {
                       bestResolved !== null && perResolved !== null && perResolved === bestResolved;
                     return (
                       <tr key={r.id} className="bg-zinc-950 hover:bg-zinc-900 transition-colors">
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2 sticky left-0 bg-zinc-950">
                           <StatusBadge run={r} />
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2 sticky left-0 bg-zinc-950">
                           <Link
                             to="/models/$slug"
                             params={{ slug: r.modelSlug }}

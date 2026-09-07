@@ -18,6 +18,7 @@ const searchSchema = z.object({
 export type FinderSearch = z.infer<typeof searchSchema>;
 
 export const Route = createFileRoute("/finder")({
+  head: () => ({ title: "Finder · Pareto" }),
   validateSearch: (search: Record<string, unknown>): FinderSearch => {
     // TanStack Router parses numeric-looking params as numbers — coerce back
     // to string so `?maxCost=33` and `?maxCost=%2233%22` both round-trip.
@@ -96,29 +97,34 @@ function ConfigCard({
     run.costUsdTotal !== null && run.costUsdTotal !== undefined && run.nSolved > 0
       ? run.costUsdTotal / run.nSolved
       : null;
-  const border =
-    tone === "best" ? "border-cyan-500/40" : "border-zinc-800/80";
+  const best = tone === "best";
   return (
-    <div className={`bg-zinc-950 border ${border} rounded p-3 flex flex-col gap-1.5`}>
+    <div
+      className={`bg-zinc-950 border rounded p-4 flex flex-col gap-2 ${
+        best ? "border-cyan-400 ring-1 ring-cyan-400/50 shadow-lg shadow-cyan-950/40" : "border-zinc-800/80"
+      }`}
+    >
       <div className="flex items-center justify-between">
         <span
           className={`text-[11px] uppercase font-bold tracking-wider ${
-            tone === "best" ? "text-cyan-400" : "text-zinc-500"
+            best ? "text-cyan-300" : "text-zinc-500"
           }`}
         >
           {rank}
         </span>
-        <span className="text-[11px] font-mono text-zinc-600">{run.sourceRunId}</span>
+        <span className="text-[11px] font-mono text-zinc-500">{run.sourceRunId}</span>
       </div>
       <div className="flex items-baseline justify-between gap-2">
         <Link
           to="/models/$slug"
           params={{ slug: run.modelSlug }}
-          className="text-base font-bold text-zinc-100 hover:text-emerald-400 hover:underline"
+          className={`font-bold text-zinc-100 hover:text-emerald-400 hover:underline ${
+            best ? "text-xl" : "text-base"
+          }`}
         >
           {run.modelDisplayName}
         </Link>
-        <span className="text-sm font-bold font-mono text-zinc-100">
+        <span className={`font-bold font-mono text-zinc-100 ${best ? "text-lg" : "text-sm"}`}>
           {run.solveRate.toFixed(1)}%
         </span>
       </div>
@@ -199,7 +205,7 @@ function FinderPage() {
   );
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-[#09090b]">
+    <div className="flex-1 flex flex-col min-h-0 bg-zinc-950">
       {/* Same compiled-data banner as the Explorer — a recommendation surface needs it most */}
       <div className="bg-zinc-900/90 border-b border-zinc-800 px-4 py-1.5 text-[11px] flex items-center justify-between gap-4 text-zinc-400">
         <div className="flex items-center gap-2 flex-wrap">

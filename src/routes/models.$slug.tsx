@@ -5,7 +5,7 @@ import { Pin } from "lucide-react";
 import { getModelData, type ExplorerRun } from "../server/functions";
 import { useEChart } from "../components/ChartSlots";
 import { benchLabel } from "../components/FilterRail";
-import { EffortChart } from "../components/ChartSlots";
+import { EffortChart, useThemeTick } from "../components/ChartSlots";
 import { parsePassAtK } from "../finder";
 
 const searchSchema = z.object({
@@ -15,6 +15,10 @@ const searchSchema = z.object({
 export type ModelSearch = z.infer<typeof searchSchema>;
 
 export const Route = createFileRoute("/models/$slug")({
+  head: (ctx: any) => {
+    const name = ctx?.matches?.[0]?.loaderData?.model?.displayName;
+    return { title: name ? `${name} · Pareto` : "Model · Pareto" };
+  },
   validateSearch: (search: Record<string, unknown>): ModelSearch => ({
     // Numeric-looking params arrive parsed as numbers — coerce to string.
     benchmark:
@@ -92,6 +96,7 @@ function ModelMovementChart({
   runs: ExplorerRun[];
   benchFrontier: Array<{ cost: number; solveRate: number }>;
 }) {
+  const themeTick = useThemeTick();
   const valid = runs.filter((r) => r.hasCost && r.cost !== null && r.cost > 0);
   const chartRef = useEChart(
     () => {
@@ -178,7 +183,7 @@ function ModelMovementChart({
         ],
       };
     },
-    [valid, benchFrontier]
+    [valid, benchFrontier, themeTick]
   );
 
   return (
@@ -211,7 +216,7 @@ function ModelPage() {
   const frontierCount = runs.filter((r) => r.isFrontier).length;
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-[#09090b]">
+    <div className="flex-1 flex flex-col min-h-0 bg-zinc-950">
       <div className="bg-zinc-900/90 border-b border-zinc-800 px-4 py-1.5 text-[11px] flex items-center justify-between gap-4 text-zinc-400">
         <div className="flex items-center gap-2">
           <span className="text-amber-400 font-bold tracking-wide">NOTE</span>

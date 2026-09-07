@@ -1,6 +1,9 @@
 import React, { useEffect, useRef } from "react";
 import type { ExplorerRun } from "../server/functions";
 import { parsePassAtK, effortRank } from "../finder";
+import { chartPalette, categoryPalette, prefersReducedMotion, useThemeTick } from "../theme";
+
+export { useThemeTick };
 import { buildResourceCompare } from "../resources";
 
 // Shared chrome for the Pass@k and Effort chart slots (DESIGN.md §6).
@@ -44,10 +47,19 @@ export function useEChart(
       if (typeof window === "undefined" || !chartRef.current) return;
       const echarts = await import("echarts");
       if (!isMounted || !chartRef.current) return;
+      const pal = chartPalette();
       if (!chartInstanceRef.current) {
-        chartInstanceRef.current = echarts.init(chartRef.current, "dark", { renderer: "svg" });
+        chartInstanceRef.current = echarts.init(
+          chartRef.current,
+          pal.dark ? "dark" : undefined,
+          { renderer: "svg" }
+        );
       }
-      chartInstanceRef.current.setOption(buildOption(echarts), true);
+      const option = buildOption(echarts);
+      if (option && typeof option === "object" && "animationDuration" in option) {
+        option.animationDuration = prefersReducedMotion() ? 0 : 200;
+      }
+      chartInstanceRef.current.setOption(option, true);
     }
     init();
     return () => {
@@ -66,7 +78,7 @@ export function useEChart(
   return chartRef;
 }
 
-const SLOT_COLORS = ["#10b981", "#06b6d4", "#a78bfa", "#f59e0b", "#f472b6", "#60a5fa"];
+const slotColors = () => categoryPalette();
 
 function tooltipFlags(r: ExplorerRun): string {
   const flag = (ok: boolean, label: string) =>
@@ -83,6 +95,7 @@ function tooltipFlags(r: ExplorerRun): string {
 const MAX_PASSK_SERIES = 10;
 
 export function PassAtKChart({ runs }: { runs: ExplorerRun[] }) {
+  const themeTick = useThemeTick();
   const allSeries = runs
     .filter((r) => r.hasPassAtK)
     .map((r) => ({
@@ -118,7 +131,7 @@ export function PassAtKChart({ runs }: { runs: ExplorerRun[] }) {
             width: s.run.isFrontier ? 2 : 1.5,
             opacity: s.run.isFrontier ? 1 : 0.55,
           },
-          itemStyle: { color: SLOT_COLORS[i % SLOT_COLORS.length] },
+          itemStyle: { color: slotColors()[i % slotColors().length] },
           emphasis: { scale: 1.4 },
           connectNulls: false,
         };
@@ -185,7 +198,7 @@ export function PassAtKChart({ runs }: { runs: ExplorerRun[] }) {
         series: lines,
       };
     },
-    [seriesData]
+    [seriesData, themeTick]
   );
 
   if (seriesData.length === 0) {
@@ -209,6 +222,7 @@ export function PassAtKChart({ runs }: { runs: ExplorerRun[] }) {
 }
 
 export function EffortChart({ runs }: { runs: ExplorerRun[] }) {
+  const themeTick = useThemeTick();
   // Group by model+harness; a group qualifies only with >= 2 distinct effort presets.
   const groups = new Map<
     string,
@@ -244,7 +258,7 @@ export function EffortChart({ runs }: { runs: ExplorerRun[] }) {
         showSymbol: true,
         symbolSize: 8,
         lineStyle: { width: 2, opacity: 0.9 },
-        itemStyle: { color: SLOT_COLORS[i % SLOT_COLORS.length] },
+        itemStyle: { color: slotColors()[i % slotColors().length] },
         connectNulls: false,
         emphasis: { scale: 1.4 },
       }));
@@ -308,7 +322,7 @@ export function EffortChart({ runs }: { runs: ExplorerRun[] }) {
         series: lines,
       };
     },
-    [qualifying]
+    [qualifying, themeTick]
   );
 
   if (qualifying.length === 0) {
@@ -354,7 +368,7 @@ export function ResourceChart({ runs }: { runs: ExplorerRun[] }) {
           return m ? Number(m.mult.toFixed(3)) : null;
         }),
         itemStyle: {
-          color: c.isBaseline ? "#10b981" : SLOT_COLORS[(i + 1) % SLOT_COLORS.length],
+          color: c.isBaseline ? "#10b981" : slotColors()[(i + 1) % slotColors().length],
           opacity: c.isBaseline ? 1 : 0.85,
         },
         barMaxWidth: 22,

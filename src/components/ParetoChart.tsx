@@ -2,9 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { Pin } from "lucide-react";
 import type { ExplorerRun } from "../server/functions";
 import { effortRank } from "../finder";
-
-// Categorical palette shared with the chart slots (kept local to avoid a cycle).
-const SLOT_COLORS = ["#10b981", "#06b6d4", "#a78bfa", "#f59e0b", "#f472b6", "#60a5fa"];
+import { categoryPalette, chartPalette, prefersReducedMotion, useThemeTick } from "../theme";
 
 interface ParetoChartProps {
   runs: ExplorerRun[];
@@ -78,7 +76,7 @@ export function ParetoChart({
     return [];
   }, [runs, colorBy]);
   const categoryColor = React.useMemo(
-    () => new Map(categoryKeys.map((k, i) => [k, SLOT_COLORS[i % SLOT_COLORS.length]])),
+    () => new Map(categoryKeys.map((k, i) => [k, categoryPalette()[i % categoryPalette().length]])),
     [categoryKeys]
   );
   const isKneePoint = React.useCallback(
@@ -104,8 +102,12 @@ export function ParetoChart({
 
       if (!isMounted || !chartRef.current) return;
 
+      const pal = chartPalette();
+      const motionOff = prefersReducedMotion();
       if (!chartInstanceRef.current) {
-        const chart = echarts.init(chartRef.current, "dark", { renderer: "svg" });
+        const chart = echarts.init(chartRef.current, pal.dark ? "dark" : undefined, {
+          renderer: "svg",
+        });
         chartInstanceRef.current = chart;
 
         chart.on("click", (params: any) => {
@@ -173,10 +175,10 @@ export function ParetoChart({
       // size/polyline and the cyan knee keep their encodings; dominated points
       // stay quiet via opacity. colorBy=none restores the gray-dominated scheme.
       const fillFor = (r: ExplorerRun): string => {
-        if (isKneePoint(r)) return COLOR.knee;
-        if (colorBy === "none") return r.isFrontier ? COLOR.frontier : COLOR.dominated;
+        if (isKneePoint(r)) return pal.knee;
+        if (colorBy === "none") return r.isFrontier ? pal.frontier : pal.dominated;
         const key = colorBy === "effort" ? r.effortPresetSlug : r.harnessName;
-        return categoryColor.get(key) ?? COLOR.dominated;
+        return categoryColor.get(key) ?? pal.dominated;
       };
 
       // Log-scale X bounds: half a decade below and ~25% above so edge points breathe.
@@ -205,16 +207,16 @@ export function ParetoChart({
 
         if (r.isFrontier) {
           symbolSize = 11;
-          borderColor = "#064e3b";
+          borderColor = pal.frontierBorder;
           borderWidth = 1.5;
           opacity = 1;
-          if (colorBy === "none") color = COLOR.frontier;
+          if (colorBy === "none") color = pal.frontier;
         }
 
         if (knee) {
           symbolSize = 16;
-          color = COLOR.knee;
-          borderColor = "#ffffff";
+          color = pal.knee;
+          borderColor = pal.dark ? "#ffffff" : "#ffffff";
           borderWidth = 2;
           opacity = 1;
           shadowBlur = 12;
@@ -223,7 +225,7 @@ export function ParetoChart({
 
         if (isPinned) {
           symbolSize = Math.max(symbolSize, 14);
-          borderColor = COLOR.pin;
+          borderColor = pal.pin;
           borderWidth = 3;
           opacity = 1;
           shadowBlur = 8;
@@ -272,7 +274,7 @@ export function ParetoChart({
                     backgroundColor: "#083344",
                     padding: [4, 6, 2, 6],
                     borderRadius: [4, 4, 0, 0],
-                    borderColor: COLOR.knee,
+                    borderColor: pal.knee,
                     borderWidth: 1,
                   },
                   sub: {
@@ -282,7 +284,7 @@ export function ParetoChart({
                     backgroundColor: "#083344",
                     padding: [2, 6, 4, 6],
                     borderRadius: [0, 0, 4, 4],
-                    borderColor: COLOR.knee,
+                    borderColor: pal.knee,
                     borderWidth: 1,
                   },
                 },
@@ -294,7 +296,7 @@ export function ParetoChart({
 
       const option = {
         backgroundColor: "transparent",
-        animationDuration: 200,
+        animationDuration: motionOff ? 0 : 200,
         grid: {
           top: 44,
           right: 36,
@@ -359,15 +361,15 @@ export function ParetoChart({
           name: "USD per task (log)",
           nameLocation: "middle",
           nameGap: 30,
-          nameTextStyle: { color: COLOR.axisName, fontSize: 11, fontFamily: "monospace" },
+          nameTextStyle: { color: pal.axisName, fontSize: 11, fontFamily: "monospace" },
           axisLabel: {
-            color: COLOR.axisName,
+            color: pal.axisName,
             fontFamily: "monospace",
             fontSize: 11,
             formatter: (v: number) => fmtUsd(v),
           },
-          splitLine: { lineStyle: { color: COLOR.grid, type: "dashed" } },
-          axisLine: { lineStyle: { color: COLOR.axis } },
+          splitLine: { lineStyle: { color: pal.grid, type: "dashed" } },
+          axisLine: { lineStyle: { color: pal.axis } },
         },
         yAxis: {
           type: "value",
@@ -376,15 +378,15 @@ export function ParetoChart({
           name: "Solve rate (%)",
           nameLocation: "middle",
           nameGap: 40,
-          nameTextStyle: { color: COLOR.axisName, fontSize: 11, fontFamily: "monospace" },
+          nameTextStyle: { color: pal.axisName, fontSize: 11, fontFamily: "monospace" },
           axisLabel: {
-            color: COLOR.axisName,
+            color: pal.axisName,
             fontFamily: "monospace",
             fontSize: 11,
             formatter: (v: number) => `${v}%`,
           },
-          splitLine: { lineStyle: { color: COLOR.grid, type: "dashed" } },
-          axisLine: { lineStyle: { color: COLOR.axis } },
+          splitLine: { lineStyle: { color: pal.grid, type: "dashed" } },
+          axisLine: { lineStyle: { color: pal.axis } },
         },
         series: [
           {
@@ -393,7 +395,7 @@ export function ParetoChart({
             data: polylineData,
             smooth: false,
             showSymbol: false,
-            lineStyle: { color: COLOR.frontier, width: 2, opacity: 0.9, type: "solid" },
+            lineStyle: { color: pal.frontier, width: 2, opacity: 0.9, type: "solid" },
             silent: true,
             z: 2,
           },
@@ -470,7 +472,7 @@ export function ParetoChart({
                 <span key={k} className="flex items-center gap-1 text-zinc-400">
                   <span
                     className="h-2 w-2 rounded-full inline-block"
-                    style={{ backgroundColor: categoryColor.get(k) ?? COLOR.dominated }}
+                    style={{ backgroundColor: categoryColor.get(k) ?? pal.dominated }}
                   />
                   {k}
                 </span>

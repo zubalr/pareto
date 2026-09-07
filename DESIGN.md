@@ -449,10 +449,18 @@ removed. Production SSR re-verified after deploy.**
 | 70 | Methodology: default story is DeepSWE (knee DeepSeek V4 Pro · $0.24/task · 62.8%); worked Finder example cites real run id `01J8RUNDS008CD10CMINISWEAG`; official-vs-seed provenance named (Harbor/Aider/SWE official, TB4 archive compiled); non-claims added (not an independent eval lab, not an AA index) | PASS |
 | 71 | `colorBy=harness` default: categorical legend in chart header (mini-SWE-agent hue visible), dominated points stay quiet, knee cyan + frontier polyline unchanged; `colorBy=effort`/`none` round-trip | PASS |
 | 72 | Table: Effort column added (sortable), harness·effort no longer crammed, default order knee → frontier → solve desc | PASS |
-| 73 | `/models/gpt-6-astra`: "Appears on 4 boards" index (TB×3, DeepSWE×2, SWE×1, Aider×1) each linking to its own board; effort curve renders when ≥2 presets | PASS |
+| 73 | `/models/$slug` cross-bench index: renders on production after two defects fixed — (a) `data.index.entries` accidentally read `Array.prototype.entries` (length 1) instead of the array; (b) the model page defaulted to TB 4.0 while production defaults to DeepSWE, landing `/models/gpt-6-astra` on "Unknown model". Now: DeepSWE default mirrored server-side, "Appears on 2 boards" (DeepSWE + TB2; Agy's canonical model-identity pass re-mapped some Astra rows mid-QA) with per-board links; effort curve renders when ≥2 presets | FIXED/PASS |
 | 74 | Finder: `effortMatch` chip in banner clears on click; typography at the Phase-8 floor | PASS |
 | 75 | Mobile 375px: Explorer has no page-wide horizontal scroll (scrollWidth ≤ clientWidth); "Filters" button opens the rail as a drawer with all sections; Finder gets the same drawer ("Inputs") | PASS |
 | 76 | Explorer SSR: restored after the colorBy scope fix — `<aside>`, Match effort, search box, and color select all server-rendered | FIXED |
 | 77 | DeepSWE default on `/` (Agy's `7c08e52` live); Harbor TB2 still 18 rows — nothing faked | PASS |
 | 78 | README: default board = DeepSWE called out in intro + routes table | PASS |
 | 79 | `pnpm test --run` | PASS (71) |
+
+### Phase 9 addendum (2026-09-07, production `c2d76076`)
+
+| # | Check | Result |
+|---|---|---|
+| 80 | SSR regression hunt: the Explorer colorBy legend + the model cross-bench section both silently suspended SSR (`<!--$!-->` empty main). Explorer fixed (component-scope `useMemo` for category maps); model page fixed (single server fn per loader — the two-parallel-`createServerFn` pattern left one promise unsettled on Workers; index query folded into `getModelData`) | FIXED |
+| 81 | Model page defaults mirror the Explorer default (DeepSWE first, TB 4.0 archive second) — "Unknown model" on the default bench can no longer happen for a valid slug | FIXED |
+| 82 | Selector during Agy's data churn: TB20 row temporarily surfaced as "Terminal-Bench 4.0" (Agy renamed/migrated mid-QA); `benchLabel` cannot disambiguate a data-level rename — Agy lane | NOTE |

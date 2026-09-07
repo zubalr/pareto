@@ -400,4 +400,4 @@ Harbor, Aider, and SWE-bench, README live-board badges, Compare added to home na
 |---|---|---|
 | 55 | GitHub launch render re-check: badges live (see #51), repo About carries the homepage link and topics, `edf8df9` tests-only Actions workflow present and untouched | PASS |
 | 56 | `public/robots.txt` added (allow `/`, no sitemap — no marketing pages to index) | PASS |
-| 57 | Production re-probe after confirm deploy: `/og.png`, DeepSWE selector, Finder floor, Today omission, Compare nav (rows 47–53 unchanged) | PASS |
+| 57 | Production re-probe after confirm deploy (`29cc4f97`): `/og.png` + `/robots.txt` 200, DeepSWE selector option present, floor finder best fit deepseek-v4-flash, Today payload keeps unrestated runs at `cost:null` (8 null / 74 plotted as Agy's restatement cron covers more rows — no reported fallback), Compare nav present | PASS |

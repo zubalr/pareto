@@ -49,9 +49,9 @@ describe("theme preference round-trip", () => {
     expect(getThemePref()).toBe("dark");
   });
 
-  it("defaults to dark with no stored preference", () => {
+  it("defaults to light with no stored preference (Phase 11: light is the product)", () => {
     stubWindow(true);
-    expect(getThemePref()).toBe("dark");
+    expect(getThemePref()).toBe("light");
   });
 
   it("resolves system to the OS preference", () => {

@@ -3,7 +3,7 @@ import * as React from "react";
 import { z } from "zod";
 import { Pin } from "lucide-react";
 import { getModelData, type ExplorerRun } from "../server/functions";
-import { useEChart } from "../components/ChartSlots";
+import { useEChart, ChartSkeleton } from "../components/ChartSlots";
 import { benchLabel } from "../components/FilterRail";
 import { EffortChart, useThemeTick } from "../components/ChartSlots";
 import { parsePassAtK } from "../finder";
@@ -98,7 +98,7 @@ function ModelMovementChart({
 }) {
   const themeTick = useThemeTick();
   const valid = runs.filter((r) => r.hasCost && r.cost !== null && r.cost > 0);
-  const chartRef = useEChart(
+  const { ref: chartRef, ready: chartReady } = useEChart(
     () => {
       const costs = valid.map((r) => r.cost as number);
       const minCost = Math.min(...costs, ...(benchFrontier.map((f) => f.cost) ?? []));
@@ -196,7 +196,10 @@ function ModelMovementChart({
           {valid.length} plotted · dashed: bench frontier
         </span>
       </div>
-      <div ref={chartRef} className="w-full h-[300px]" />
+      <div className="relative w-full h-[300px]">
+        <ChartSkeleton ready={chartReady} />
+        <div ref={chartRef} className={`absolute inset-0 ${chartReady ? "" : "opacity-0"}`} />
+      </div>
     </div>
   );
 }

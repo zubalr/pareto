@@ -1,21 +1,70 @@
-# DESIGN.md — Pareto Explorer, Phase 1.5
+# DESIGN.md — Pareto, Phase 11 (Pick)
 
-Design record for the Explorer board: layout, chart encodings, color/opacity rules,
-empty & coverage states, and the specification for future charts. Written so the next
-session (human or agent) can reconstruct every visual decision without re-deriving it.
+Design record for the product: the Pick recommendation surface, the Explorer board's
+layout and chart encodings, color/opacity rules, empty & coverage states, and the
+specification for future charts. Written so the next session (human or agent) can
+reconstruct every visual decision without re-deriving it.
 
-**Status: needs deploy (Phases 2–3 UI).** Phase 2 data-plane ingest is committed and
-live; the Phase 2 product surfaces (`/finder`, `/models/*`, chart slots) and the Phase 3
-surfaces (`/compare`, Resources slot, multi-pin) are a local patch — production
-`pareto.jubairjashim1975.workers.dev` still serves a shell for `/finder` (verified
-2026-09-06). Deploy belongs to the ingest/account lane; `pnpm deploy` publishes this
-patch unchanged once that lane is clear.
+**Status: Phase 11.** `/` is **Pick** — light-first, vibrant, domain → budget → one
+answer. The Explorer board lives at `/explore` (old `/?benchmark=…` URLs redirect
+there, params preserved). Phase 10 theme toggle, CSV export, skip link, density, and
+how-to-read carry over. **Default theme is now light**; dark remains an operator
+toggle, not the first impression.
+
+---
+
+## 0. Pick — the front door (`/`)
+
+A stranger should not learn "benchmark versions." Pick asks two questions — *what are
+you doing?* (domain) and *what can you spend?* — and answers with **one
+configuration**: model, effort, harness (if agentic), expected score, cost, provenance,
+and why, plus one cheaper alternative and one stronger over-budget option. URL shape:
+`/?domain=coding|general|math|science&budget=…&floor=…&intent=…&objective=…`.
+
+### Domain → bench map (fixed; do not improvise)
+
+| Domain | Primary board (Pick uses this) | Sub-intents | Cost semantics |
+|---|---|---|---|
+| **Coding** | DeepSWE 1.1 (113, live D1) | Terminal (Harbor TB 2.0) · Polyglot (Aider) · GitHub bugs (SWE-bench Verified) | measured $/task (reported) |
+| **General** | MMLU-Pro (TIGER-Lab snapshot) | — (IFEval absent from snapshot) | list $/M output — **price proxy, not $/task** |
+| **Math** | AIME 2025 (MathArena frozen snapshot) | — | list $/M output — price proxy |
+| **Science** | SciCode (Kaggle Open Benchmarks snapshot) | GPQA Diamond (**saturated**, ~95% top) | list $/M output — price proxy |
+
+- **Coding is wired to live D1** via the read-only Finder server fn; the agentic slice
+  is matched at `max` effort for comparability. When the winning model has an `xhigh`
+  run on the same bench, it appears as the separate "spend more" alternative — never
+  mixed into the same sentence as the max answer. Terminal/Polyglot/GitHub intents use
+  all-effort slices; every answer still names its effort.
+- **General/math/science read a compiled, attributed snapshot**
+  (`src/data/compiled-domain-scores.ts`, < 150 KB, retrieved 2026-09-08; sources,
+  licenses, and staleness notes inline in `COMPILED_SOURCES`). Not a cron. Snapshot
+  rows map onto existing D1 slugs when the model is obviously the same, so snapshot
+  answers keep dossier links.
+- **Proxy rule:** snapshot budgets cap OpenRouter list $/M output — labeled
+  "price proxy, not $/task" everywhere it appears. Rows without a price are omitted
+  from budget filtering (the same rule as a coding run without cost telemetry), never
+  priced at zero.
+- **One ranker.** Pick calls `selectFinder` (`src/finder.ts`) on the active slice; the
+  quality floor is a hard pre-filter applied before ranking (below-floor runs are
+  excluded, never silently accepted). `src/pick.ts` adds only the framing: cheaper
+  alternative (strictly cheaper eligible run), stronger over-budget option (cheapest
+  over-budget run that outscores the answer), xhigh upgrade (same model, higher
+  effort). Worked example (live D1): coding → $2/task → 50% floor → best = GLM-5.3
+  Flash (max · 63.4% · $0.48/task · `01J8RUNDS6314BEDBMINISWEAG`), cheaper = DeepSeek
+  V4 Flash (53.3% · $0.10/task), over-budget step = GPT-5.6 Luna (67.2% · $3.03/task).
+- **Same-bench only:** an answer links to the dossier and Explorer board of exactly
+  one benchmark version (Pareto-One-Bench rule). Snapshot answers cite the source
+  table + retrieved date instead of a D1 link.
+- **Redirect:** any legacy Explorer param on `/` (`benchmark`, `models`, `harnesses`,
+  `efforts`, `costBasis`, `pinned`, `chart`, `effortMatch`, `colorBy`, `density`)
+  307s to `/explore` with the params preserved.
+- **Mobile:** domain cards stack; the answer card renders before the controls.
 
 ---
 
 ## 1. Layout
 
-Operate-mode dashboard, dark-first (`#09090b` base, zinc scale). Reference points:
+Operate-mode dashboard at `/explore` (light paper world by default now; dark toggle retained). Reference points:
 Artificial Analysis density, SWE-bench / tbench.ai honesty. No decorative gradients,
 no emoji-as-icon (lucide-react icons only). One screen, reading order top-to-bottom:
 
@@ -57,7 +106,7 @@ no emoji-as-icon (lucide-react icons only). One screen, reading order top-to-bot
   strings (a `?maxCost=33` must not silently vanish on the next navigate — this bug
   was found in browser QA and fixed, see §10).
 - Banner stays: numbers are compiled/seed, not an official leaderboard.
-- Nav header links Explorer / Finder / Methodology.
+- Nav header links Pick (`/`, the product front door) / Explorer (`/explore`) / Finder / Compare / Methodology.
 
 ## 2. Scatter encodings
 
@@ -145,7 +194,7 @@ Quiet dominated, loud frontier, one focal knee. Nothing else may compete.
 ## 6. Future chart specs (specify now, implement only with real data)
 
 All three share the house rules: one benchmark version per chart, coverage-gated
-(missing telemetry removes a point from that encoding, never zero-fills), dark zinc
+(missing telemetry removes a point from that encoding, never zero-fills), theme-aware
 palette, dominated/secondary series quiet per §3.
 
 ### 6.1 Pass@k ladder
@@ -315,17 +364,36 @@ brief this QA ran locally; the patch needs deploy.
 | 21 | `pnpm test --run` | PASS (38 tests incl. 13 new compare/resources tests) |
 | 22 | Dev-server asset gotcha (not an app defect): `wrangler dev` must be restarted after `pnpm build` — its static-asset manifest is startup-time; stale manifests 404 new hashed assets | NOTE |
 
-## 7. Typography & chrome
+## 7. Typography, chrome & the light visual world (Phase 11)
 
-- Body/mono mix: labels and numbers in monospace (`font-mono`), prose in sans. Sizes
-  cluster at 10–12px; strip labels 9px uppercase with wide tracking. Dense but never
-  under 9px.
-- Cards: `bg-zinc-950` on `#09090b`, 1px `zinc-800/80` borders, 4px radii (sharp,
-  instrument-like; no big marketing shadows).
-- Icon set: lucide-react only (`Zap` knee, `Pin` pinned, `Boxes`/`Cpu`/
-  `SquareTerminal`/`Gauge`/`CircleDollarSign`/`RotateCcw` in the rail). No emoji in UI
-  chrome (the Phase 1 `⚡` glyph was replaced by the `Zap` icon; the favicon is now an
-  inline SVG of the frontier polyline + knee dot).
+**Physical scene: a bright desk — paper, a green pencil on a scatter — not a SOC cave.**
+Light is the product; dark is an operator toggle. First paint is light before hydration
+(`class="light"` server-rendered; the boot script flips to dark only for a stored
+`dark`/system-dark preference; default `'light'`, in lockstep with
+`DEFAULT_THEME_PREF` in `src/theme.ts`).
+
+- **Tokens** (CSS vars in `app.css`; light on `:root`, dark overrides under `html.dark`):
+  ground `#F7F5F0`, surface `#FFFEFB`, ink `#12202A`, muted `#5C6B73`, line `#E5DFD2`,
+  accent (frontier/primary) `#0F9F6E`, knee `#1D4ED8`, warn (over-budget only) `#C2410C`.
+  Domain fields: coding green / general blue / math amber / science violet — flat
+  same-hue tints on surface, contained, not rainbow chrome. The old zinc scale maps
+  onto the paper world in light mode (so operator pages re-theme wholesale) — this is a
+  hue shift, **not** a zinc luminance invert; no zinc-on-zinc, no default `bg-zinc-950`.
+- **Type:** body & display **Source Sans 3** (variable, self-hosted via @fontsource);
+  figures/labels **IBM Plex Mono** (400/500/600) — numbers and code-ish chips only.
+  No Inter/IBM Plex Sans/Space Grotesk/DM Sans as display. Sizes: domain titles
+  ≥ 28px, Pick answer model name ≥ 26px, tables ≥ 13px comfortable (13px body base).
+- **Charts** init with the light palette from the first paint and re-init on theme
+  flips (`useThemeTick` in every chart component); tooltip/knee-label/point-border
+  colors are palette-aware. A **skeleton** (faint grid + "loading chart…") occupies
+  the chart box until the first `setOption` lands — the app never paints an empty
+  white plot while the client-only ECharts chunk loads.
+- Cards: `bg-surface` on ground, 1px `line` borders, soft radii (rounded-lg on Pick
+  cards, sharp 4px retained on operator tables); shadows only as quiet hover depth.
+- Icon set: lucide-react only. No emoji in UI chrome. Favicon: light ground + green
+  frontier polyline + blue knee dot.
+- Product invariants unchanged: one bench per scatter, dual cost honesty, coverage
+  flags (missing data omitted, never zeroed).
 
 ### Phase 4 QA — run dossiers, new-bench slices, ingest health
 
@@ -495,3 +563,44 @@ relative last-ingest time.
 | 95 | DeepSWE 70-row table paginates (50/page) — no frozen tab; SWE 184-row slice paginates the same | PASS |
 | 96 | Reduced motion: chart animation 0 + CSS transitions killed under `prefers-reduced-motion` | PASS |
 | 97 | `pnpm test --run` | PASS (81 incl. theme/csv/density/relative-time suites) |
+
+### Phase 11 — Pick + light world QA (production `57607b53` → `179be606`, 2026-09-08)
+
+Shipped: `/` is **Pick** (four domain cards first viewport; coding → live D1 via the
+Finder server fn; general/math/science → compiled attributed snapshot with
+price-proxy labeling), Explorer moved to `/explore` with legacy `/?benchmark=…`
+redirects preserving params, **light is the default theme** (paper ground `#F7F5F0`,
+surface `#FFFEFB`, ink `#12202A`, accent `#0F9F6E`, knee `#1D4ED8`, warn `#C2410C`;
+zinc utilities remapped to the paper world — a hue shift, not a zinc invert), Source
+Sans 3 body + IBM Plex Mono figures (self-hosted fontsource), domain color fields,
+boot script default `'light'` shared with `DEFAULT_THEME_PREF`, charts re-init on
+theme flips and render a skeleton until first `setOption` (never an empty painted
+plot), tooltip/knee-label/point-border colors palette-aware, nav = Pick · Explorer ·
+Finder · Compare · Methodology, science GPQA sub-intent with saturation banner,
+Methodology §5 (Pick: domain map, proxy vs $/task, ceilings, not-AA),
+`src/data/compiled-domain-scores.ts` (< 150 KB, sources/licenses/staleness inline),
+`src/pick.ts` (one ranker: `selectFinder` + Pick framing), 11 new unit tests.
+**Defect found & fixed in QA: the header nav overflowed 375px viewports (435px) —
+nav is now horizontally scrollable with shrink-0 links.** Also fixed a pre-existing
+latent chart-legend `pal` reference (masked by `??` short-circuit) to
+`chartPalette()`. Local-env note: a stale local-KV DeepSWE payload (written before
+the local D1 clone) suppressed the board until the key was deleted — KV-first
+working as designed, local-only.
+
+| # | Check (production, no `?theme=` unless stated) | Result |
+|---|---|---|
+| 98 | `/` fresh visit: first paint light (`class="light"`, no stored pref), paper ground + green accent, 28px+ domain titles, four color-field cards — not a zinc invert | PASS |
+| 99 | Coding → budget $2 → floor 50%: answer card shows **model GLM-5.3 Flash, effort max, harness mini-SWE-agent, 63.4% (72/113), $0.48/task** from live D1, why-sentence, `sourceRunId` + official badge, dossier / Explorer / Finder links | PASS |
+| 100 | Cheaper alternative (DeepSeek V4 Flash 53.3% @ $0.10) and stronger over-budget step (GPT-5.6 Luna 67.2% @ $3.03, warn tone) — both same bench, same effort | PASS |
+| 101 | Unit: `pickFromCandidates` on the DeepSWE $2 / 50% slice returns the real run id `01J8RUNDS6314BEDBMINISWEAG` (fixture = real production rows) | PASS |
+| 102 | Coding sub-intents: Terminal (Harbor TB 2.0) · Polyglot (Aider 1.0) · GitHub bugs (SWE-bench Verified 1.0) each answer from D1 with their own bench label | PASS |
+| 103 | General: Gemini 3.1 Pro Preview 91.2% MMLU-Pro @ $12/M out; red "price proxy, not $/task" always visible; 13 unpriced rows omitted (coverage note), never zeroed; sources & licenses panel | PASS |
+| 104 | Math: GPT-5.2 100.0% AIME 2025 (frozen board) @ $14/M proxy with ceiling note; Science: Gemini 3.7 Flash 43.0% SciCode @ $3.75/M | PASS |
+| 105 | Science GPQA sub-intent: Grok 4.5 94.9% with "(saturated)" chip + ceiling banner; snapshot citation `kaggle-gpqa-diamond:grok-4-5` | PASS |
+| 106 | Proxy rule unit-tested: `costSemantics` coding = $/task (no proxy); general/math/science = $/M out proxy; unpriced snapshot rows excluded by budget filtering, never priced $0 | PASS |
+| 107 | Legacy URL: `/?benchmark=…&effortMatch=max` → 307 to `/explore?…` with params preserved; board renders DeepSWE max slice (14 visible, knee GLM-5.3 Flash) | PASS |
+| 108 | `/explore` light chart from first init (green frontier, blue knee chip, warm grid); skeleton until option set — no empty white plot; Effort tab (EMPTY badge) shows the coverage empty state, not a blank canvas | PASS |
+| 109 | Theme: `?theme=light` + Light button agree (aria-pressed=true, light class); `?theme=dark` persists; dark re-themes charts (toggle re-init) | PASS |
+| 110 | Mobile 375px: no horizontal scroll (nav overflow fixed), domain cards stack, answer card renders before the controls | PASS (after fix) |
+| 111 | Methodology §5 Pick (domain→bench map table, proxy vs $/task, saturation, not-AA), DESIGN.md §Pick + §7 rewrite, README (home is Pick, light default), docs/sources.md §8 snapshot table | PASS |
+| 112 | `pnpm test --run` | PASS (92 incl. 11 new pick/theme tests) |

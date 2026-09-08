@@ -7,25 +7,38 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import * as React from "react";
+import "@fontsource-variable/source-sans-3";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
+import "@fontsource/ibm-plex-mono/600.css";
 import appCss from "../styles/app.css?url";
+import { DEFAULT_THEME_PREF } from "../theme";
 import { ThemeToggle } from "../components/ThemeToggle";
+
+const NAV = [
+  { to: "/", label: "Pick", exact: true },
+  { to: "/explore", label: "Explorer" },
+  { to: "/finder", label: "Finder" },
+  { to: "/compare", label: "Compare" },
+  { to: "/methodology", label: "Methodology" },
+] as const;
 
 export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Pareto Frontier | LLM Benchmark Cost vs Solve Intelligence" },
+      { title: "Pareto Pick | the right model for your budget" },
       {
         name: "description",
         content:
-          "Pareto Frontier analysis of LLM benchmark solve rates against USD cost per task. Find optimal models and efficiency knees.",
+          "Pick your domain and budget, get one model × effort answer with expected score, cost, and provenance. Pareto frontier analysis of public LLM benchmark runs.",
       },
       { property: "og:title", content: "Pareto — benchmark cost vs solve intelligence" },
       {
         property: "og:description",
         content:
-          "Who is on the Pareto frontier, where is the knee, what does it cost? Aggregates from Terminal-Bench, Harbor, Aider, SWE-bench, and DeepSWE runs with full provenance and honest coverage flags.",
+          "Who is on the Pareto frontier, where is the knee, what does it cost? Aggregates from DeepSWE, Terminal-Bench, Aider, and SWE-bench runs with full provenance and honest coverage flags.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://pareto.jubairjashim1975.workers.dev" },
@@ -38,20 +51,22 @@ export const Route = createRootRoute({
       {
         name: "twitter:description",
         content:
-          "Pareto frontier, knee detection, and a deterministic budget Finder across Terminal-Bench, Harbor TB2, Aider polyglot, SWE-bench Verified, and DeepSWE slices.",
+          "Pick, frontier, knee detection, and a deterministic budget Finder across DeepSWE, Harbor TB2, Aider polyglot, and SWE-bench Verified slices.",
       },
       { name: "twitter:image", content: "https://pareto.jubairjashim1975.workers.dev/og.png" },
     ],
     scripts: [
       {
-        children: `(function(){try{var u=new URLSearchParams(location.search).get('theme');var k='pareto-theme';var p=u||localStorage.getItem(k)||'dark';if(u)localStorage.setItem(k,p);var d=p==='system'?!window.matchMedia('(prefers-color-scheme: light)').matches:p!=='light';var r=document.documentElement;r.classList.toggle('dark',d);r.classList.toggle('light',!d);r.style.colorScheme=d?'dark':'light';}catch(e){}})();`,
+        // Pre-paint theme: ?theme= wins, then the stored preference, then the
+        // light product default. Kept in lockstep with theme.ts (DEFAULT_THEME_PREF).
+        children: `(function(){try{var u=new URLSearchParams(location.search).get('theme');var k='pareto-theme';var dflt='${DEFAULT_THEME_PREF}';var p=u||localStorage.getItem(k)||dflt;if(u)localStorage.setItem(k,p);var d=p==='system'?!window.matchMedia('(prefers-color-scheme: light)').matches:p!=='light';var r=document.documentElement;r.classList.toggle('dark',d);r.classList.toggle('light',!d);r.style.colorScheme=d?'dark':'light';}catch(e){}})();`,
       },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
       {
         rel: "icon",
-        href: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%2309090b'/%3E%3Cpolyline points='14,78 38,58 58,50 86,22' fill='none' stroke='%2310b981' stroke-width='10' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='58' cy='50' r='13' fill='%2306b6d4' stroke='%23fff' stroke-width='4'/%3E%3C/svg%3E",
+        href: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23F7F5F0'/%3E%3Cpolyline points='14,78 38,58 58,50 86,22' fill='none' stroke='%230F9F6E' stroke-width='10' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='58' cy='50' r='13' fill='%231D4ED8' stroke='%23FFFEFB' stroke-width='4'/%3E%3C/svg%3E",
       },
     ],
   }),
@@ -60,62 +75,43 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   return (
-    <html lang="en" className="dark h-full bg-zinc-950 text-zinc-100">
+    // Light is the product default: SSR paints the paper world, the boot
+    // script flips to dark pre-paint only for stored dark/system-dark prefs.
+    <html lang="en" className="light h-full bg-ground text-ink">
       <head>
         <HeadContent />
       </head>
-      <body className="min-h-full flex flex-col font-mono text-xs antialiased bg-zinc-950 text-zinc-100">
+      <body className="min-h-full flex flex-col font-sans text-sm antialiased bg-ground text-ink">
         <a href="#main" className="skip-link">Skip to content</a>
-        <header className="border-b border-zinc-800/80 bg-zinc-950/80 sticky top-0 z-40 px-4 py-2 flex items-center justify-between backdrop-blur">
-          <div className="flex items-center gap-6">
-            <Link to="/" className="flex items-center gap-2 text-zinc-100 hover:text-white group">
-              <span className="h-5 w-5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded flex items-center justify-center font-bold text-xs">
+        <header className="border-b border-line bg-surface/90 sticky top-0 z-40 px-4 py-2 flex items-center justify-between backdrop-blur">
+          <div className="flex items-center gap-6 min-w-0">
+            <Link to="/" className="flex items-center gap-2 text-ink hover:text-accent group shrink-0">
+              <span className="h-5 w-5 bg-accent/15 text-accent border border-accent/40 rounded flex items-center justify-center font-bold text-xs">
                 P
               </span>
-              <span className="font-bold tracking-wider text-sm">Pareto</span>
+              <span className="font-bold tracking-wide text-sm">Pareto</span>
             </Link>
 
-            <nav className="flex items-center gap-1">
-              <Link
-                to="/"
-                activeOptions={{ exact: true }}
-                activeProps={{ className: "bg-zinc-800 text-emerald-400 font-semibold" }}
-                inactiveProps={{ className: "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900" }}
-                className="px-2.5 py-1 rounded transition-colors text-xs"
-              >
-                Explorer
-              </Link>
-              <Link
-                to="/finder"
-                activeProps={{ className: "bg-zinc-800 text-emerald-400 font-semibold" }}
-                inactiveProps={{ className: "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900" }}
-                className="px-2.5 py-1 rounded transition-colors text-xs"
-              >
-                Finder
-              </Link>
-              <Link
-                to="/compare"
-                activeProps={{ className: "bg-zinc-800 text-emerald-400 font-semibold" }}
-                inactiveProps={{ className: "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900" }}
-                className="px-2.5 py-1 rounded transition-colors text-xs"
-              >
-                Compare
-              </Link>
-              <Link
-                to="/methodology"
-                activeProps={{ className: "bg-zinc-800 text-emerald-400 font-semibold" }}
-                inactiveProps={{ className: "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900" }}
-                className="px-2.5 py-1 rounded transition-colors text-xs"
-              >
-                Methodology
-              </Link>
+            <nav className="flex items-center gap-1 min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {NAV.map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  activeOptions={item.exact ? { exact: true } : undefined}
+                  activeProps={{ className: "bg-accent/10 text-accent font-semibold" }}
+                  inactiveProps={{ className: "text-mute hover:text-ink hover:bg-ground" }}
+                  className="px-2.5 py-1 rounded transition-colors text-[13px] shrink-0 whitespace-nowrap"
+                >
+                  {item.label}
+                </Link>
+              ))}
             </nav>
           </div>
 
-          <div className="flex items-center gap-3 text-zinc-500 text-[11px]">
+          <div className="flex items-center gap-3 text-mute text-[11px]">
             <ThemeToggle />
-            <span className="hidden sm:inline-block">Host: Cloudflare Workers + D1</span>
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" title="Connected" />
+            <span className="hidden sm:inline-block">Cloudflare Workers + D1</span>
+            <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" title="Connected" />
           </div>
         </header>
 
@@ -123,12 +119,15 @@ function RootComponent() {
           <Outlet />
         </main>
 
-        <footer className="border-t border-zinc-800/60 bg-zinc-950/40 px-4 py-2 text-[11px] text-zinc-500 flex flex-wrap items-center justify-between gap-2">
+        <footer className="border-t border-line bg-surface/60 px-4 py-2 text-xs text-mute flex flex-wrap items-center justify-between gap-2">
           <div>
-            Pareto Intelligence &bull; Compiled from public leaderboard fixtures &bull; Illustrative eval runs
+            Pareto — a visualization &amp; recommendation layer over public evals. Not an official
+            leaderboard, not an index.
           </div>
           <div>
-            <Link to="/methodology" className="text-zinc-400 hover:underline">Canary &amp; Formulas</Link>
+            <Link to="/methodology" className="text-mute hover:text-ink hover:underline">
+              Method &amp; provenance
+            </Link>
           </div>
         </footer>
 

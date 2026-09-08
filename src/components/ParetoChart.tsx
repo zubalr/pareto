@@ -56,6 +56,10 @@ export function ParetoChart({
   const chartInstanceRef = useRef<any>(null);
   // Handlers registered once must read the latest pin, not the init-time one.
   const lastHoveredIndexRef = useRef<number | null>(null);
+  // False until the first setOption — the skeleton replaces an empty plot.
+  const [chartReady, setChartReady] = React.useState(false);
+  // Theme flips (toggle or OS) re-run the effect so palettes follow.
+  const themeTick = useThemeTick();
 
   // Coverage rule: a run without positive reported cost never gets an X coordinate.
   const validRuns = runs.filter(
@@ -151,8 +155,8 @@ export function ParetoChart({
               subtext: runs.length > 0 ? "Clear filters or switch cost basis to restore the scatter." : "",
               left: "center",
               top: "middle",
-              textStyle: { color: "#71717a", fontSize: 12, fontFamily: "monospace" },
-              subtextStyle: { color: "#52525b", fontSize: 11, fontFamily: "monospace" },
+              textStyle: { color: pal.dark ? "#71717a" : "#5c6b73", fontSize: 12, fontFamily: "monospace" },
+              subtextStyle: { color: pal.dark ? "#52525b" : "#7e8b95", fontSize: 11, fontFamily: "monospace" },
             },
             xAxis: { show: false },
             yAxis: { show: false },
@@ -160,6 +164,7 @@ export function ParetoChart({
           },
           true
         );
+        setChartReady(true);
         return;
       }
 
@@ -199,7 +204,7 @@ export function ParetoChart({
 
         let symbolSize = 7;
         let color = fillFor(r);
-        let borderColor = "#18181b";
+        let borderColor = pal.dark ? "#18181b" : "#f7f5f0";
         let borderWidth = 1;
         let opacity = dense ? 0.3 : 0.45;
         let shadowBlur = 0;
@@ -243,7 +248,7 @@ export function ParetoChart({
           // torn down by a setOption rebuild (see DESIGN.md §2).
           emphasis: {
             scale: 1.4,
-            itemStyle: { opacity: 1, borderColor: "#d4d4d8", borderWidth: 2 },
+            itemStyle: { opacity: 1, borderColor: pal.dark ? "#d4d4d8" : "#12202a", borderWidth: 2 },
           },
         };
       });
@@ -267,21 +272,21 @@ export function ParetoChart({
                 ].join("\n"),
                 rich: {
                   title: {
-                    color: "#67e8f9",
+                    color: pal.dark ? "#67e8f9" : "#ffffff",
                     fontSize: 11,
                     fontWeight: "bold",
                     fontFamily: "monospace",
-                    backgroundColor: "#083344",
+                    backgroundColor: pal.dark ? "#083344" : "#1d4ed8",
                     padding: [4, 6, 2, 6],
                     borderRadius: [4, 4, 0, 0],
                     borderColor: pal.knee,
                     borderWidth: 1,
                   },
                   sub: {
-                    color: "#a5f3fc",
+                    color: pal.dark ? "#a5f3fc" : "#dbe4f9",
                     fontSize: 11,
                     fontFamily: "monospace",
-                    backgroundColor: "#083344",
+                    backgroundColor: pal.dark ? "#083344" : "#1d4ed8",
                     padding: [2, 6, 4, 6],
                     borderRadius: [0, 0, 4, 4],
                     borderColor: pal.knee,
@@ -306,19 +311,20 @@ export function ParetoChart({
         },
         tooltip: {
           trigger: "item",
-          backgroundColor: "#101013",
-          borderColor: "#3f3f46",
+          backgroundColor: pal.tooltipBg,
+          borderColor: pal.tooltipBorder,
           borderWidth: 1,
           padding: [8, 10],
-          textStyle: { color: "#f4f4f5", fontSize: 11, fontFamily: "monospace" },
+          textStyle: { color: pal.tooltipText, fontSize: 11, fontFamily: "monospace" },
           formatter: (params: any) => {
             const r: ExplorerRun = params.data?.run;
             if (!r) return "";
             const isKnee = kneePoint?.id === r.id;
+            const ink = pal.dark;
             const statusBadge = isKnee
-              ? `<span style='color:#67e8f9;font-weight:bold;'>KNEE</span><span style='color:#71717a;'> · best cost/solve trade-off</span>`
+              ? `<span style='color:${ink ? '#67e8f9' : '#1d4ed8'};font-weight:bold;'>KNEE</span><span style='color:#71717a;'> · best cost/solve trade-off</span>`
               : r.isFrontier
-                ? `<span style='color:#34d399;font-weight:bold;'>FRONTIER</span><span style='color:#71717a;'> · undominated</span>`
+                ? `<span style='color:${ink ? '#34d399' : '#0f9f6e'};font-weight:bold;'>FRONTIER</span><span style='color:#71717a;'> · undominated</span>`
                 : `<span style='color:#71717a;'>DOMINATED</span>`;
 
             const other =
@@ -328,21 +334,21 @@ export function ParetoChart({
             const shownLabel = shown !== null && shown !== undefined ? fmtUsd(shown) : "— (not restated)";
 
             const flag = (ok: boolean, label: string) =>
-              `<span style="color:${ok ? "#d4d4d8" : "#3f3f46"};">${label}${ok ? " ✓" : " –"}</span>`;
+              `<span style="color:${ok ? (ink ? '#d4d4d8' : '#46545e') : ink ? '#3f3f46' : '#c8c0ac'};">${label}${ok ? ' ✓' : ' –'}</span>`;
 
             return `
               <div style="min-width: 250px; line-height: 1.55;">
-                <div style="font-weight:bold; font-size: 13px; color:#ffffff;">
+                <div style="font-weight:bold; font-size: 13px; color:${ink ? '#ffffff' : '#12202a'};">
                   ${r.modelDisplayName}
                 </div>
-                <div style="color: #a1a1aa; font-size: 10px; margin-bottom: 6px;">
+                <div style="color: ${ink ? '#a1a1aa' : '#5c6b73'}; font-size: 10px; margin-bottom: 6px;">
                   ${r.providerName} · ${r.harnessName} ${r.harnessVersion !== "default" ? "v" + r.harnessVersion : ""} · effort: ${r.effortPresetSlug}
                 </div>
-                <div style="margin-bottom: 6px; padding: 3px 0; border-top: 1px solid #27272a; border-bottom: 1px solid #27272a;">
-                  <div>Solve rate: <strong style="color:#ffffff;">${r.solveRate.toFixed(1)}%</strong> <span style="color:#71717a;">(${r.nSolved}/${r.nTotal} tasks)</span></div>
-                  <div>Cost / task: <strong style="color:#ffffff;">${shownLabel}</strong> <span style="color:#52525b;">(${costBasis})</span>${other !== null && other !== undefined && other !== shown ? ` <span style="color:#52525b;">· alt ${fmtUsd(other)}</span>` : ""}</div>
-                  <div>Total run cost: <span style="color:#a1a1aa;">$${(r.costUsdReported ?? 0).toFixed(0)}</span></div>
-                  ${r.latencyP50Seconds !== null && r.latencyP50Seconds !== undefined ? `<div>Latency p50: <span style="color:#a1a1aa;">${r.latencyP50Seconds.toFixed(1)}s</span></div>` : ""}
+                <div style="margin-bottom: 6px; padding: 3px 0; border-top: 1px solid ${ink ? '#27272a' : '#e3ddcf'}; border-bottom: 1px solid ${ink ? '#27272a' : '#e3ddcf'};">
+                  <div>Solve rate: <strong style="color:${ink ? '#ffffff' : '#12202a'};">${r.solveRate.toFixed(1)}%</strong> <span style="color:#71717a;">(${r.nSolved}/${r.nTotal} tasks)</span></div>
+                  <div>Cost / task: <strong style="color:${ink ? '#ffffff' : '#12202a'};">${shownLabel}</strong> <span style="color:#52525b;">(${costBasis})</span>${other !== null && other !== undefined && other !== shown ? ` <span style="color:#52525b;">· alt ${fmtUsd(other)}</span>` : ""}</div>
+                  <div>Total run cost: <span style="color:${ink ? '#a1a1aa' : '#5c6b73'};">$${(r.costUsdReported ?? 0).toFixed(0)}</span></div>
+                  ${r.latencyP50Seconds !== null && r.latencyP50Seconds !== undefined ? `<div>Latency p50: <span style="color:${ink ? '#a1a1aa' : '#5c6b73'};">${r.latencyP50Seconds.toFixed(1)}s</span></div>` : ""}
                 </div>
                 <div style="margin-bottom: 4px;">${statusBadge}</div>
                 <div style="display:flex; gap: 6px; font-size: 9px; margin-bottom: 3px;">
@@ -410,6 +416,7 @@ export function ParetoChart({
       };
 
       chart.setOption(option, true);
+      setChartReady(true);
       lastHoveredIndexRef.current = null;
     }
 
@@ -421,7 +428,7 @@ export function ParetoChart({
     // hoveredId intentionally excluded: hover emphasis is applied via
     // dispatchAction in the effect below so tooltips are not destroyed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runs, frontier, kneePoint, pinnedIds, costBasis, colorBy, categoryKeys]);
+  }, [runs, frontier, kneePoint, pinnedIds, costBasis, colorBy, categoryKeys, themeTick]);
 
   // Hover sync (chart <-> table) without rebuilding the option.
   useEffect(() => {
@@ -472,7 +479,7 @@ export function ParetoChart({
                 <span key={k} className="flex items-center gap-1 text-zinc-400">
                   <span
                     className="h-2 w-2 rounded-full inline-block"
-                    style={{ backgroundColor: categoryColor.get(k) ?? pal.dominated }}
+                    style={{ backgroundColor: categoryColor.get(k) ?? chartPalette().dominated }}
                   />
                   {k}
                 </span>
@@ -517,7 +524,19 @@ export function ParetoChart({
           </span>
         </div>
       ) : (
-        <div ref={chartRef} className="flex-1 w-full min-h-[300px]" />
+        <div className="relative flex-1 w-full min-h-[300px]">
+          {!chartReady && (
+            <div aria-hidden className="chart-skeleton absolute inset-0 rounded flex items-center justify-center">
+              <span className="text-[11px] font-mono text-mute bg-surface border border-line rounded px-2 py-0.5">
+                loading chart…
+              </span>
+            </div>
+          )}
+          <div
+            ref={chartRef}
+            className={`w-full h-full transition-opacity ${chartReady ? "opacity-100" : "opacity-0"}`}
+          />
+        </div>
       )}
     </div>
   );

@@ -133,6 +133,7 @@ export const getFinderData = createServerFn()
         cost: basisToday ? r.run.costPerTaskNormalized : r.run.costPerTaskReported,
         costUsdTotal: basisToday ? r.run.costUsdNormalized : r.run.costUsdReported,
         nSolved: r.run.nSolved,
+        nTotal: r.run.nTotal,
         latencyP50Seconds: r.run.latencyP50Seconds,
         sourceName: r.source.name,
         sourceOfficial: Boolean(r.source.official),

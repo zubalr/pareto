@@ -1,67 +1,137 @@
 @import "tailwindcss";
 
+/* ---- Phase 11 visual world: a bright desk — paper ground, green pencil on a
+       scatter. Light is the default product; dark remains an operator toggle.
+       Tailwind v4 utilities compile to var(--color-*), so mapping the zinc
+       scale re-themes every surface at once — but the light values below are a
+       warm paper world (not a luminance invert): hues shift, accents change
+       species (frontier green #0F9F6E, knee blue #1D4ED8, warn #C2410C). ---- */
+
+@theme {
+  --font-sans: "Source Sans 3 Variable", "Source Sans 3", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Semantic tokens (Pick surfaces; dark variants below) */
+  --color-ground: #f7f5f0;
+  --color-surface: #fffefb;
+  --color-ink: #12202a;
+  --color-mute: #5c6b73;
+  --color-line: #e5dfd2;
+  --color-accent: #0f9f6e;
+  --color-knee: #1d4ed8;
+  --color-warn: #c2410c;
+  /* Domain color fields — contained, not chrome */
+  --color-domain-coding: #0f9f6e;
+  --color-domain-general: #1d4ed8;
+  --color-domain-math: #b45309;
+  --color-domain-science: #7c3aed;
+}
+
+/* Paper world (default). The zinc scale carries the operator surfaces built on
+   zinc utilities; emerald/cyan/amber carry accent/knee/pin semantics. */
 :root {
+  color-scheme: light;
+  --color-zinc-950: #f7f5f0;
+  --color-zinc-900: #efebe1;
+  --color-zinc-800: #e3ddcf;
+  --color-zinc-700: #c8c0ac;
+  --color-zinc-600: #7e8b95;
+  --color-zinc-500: #5c6b73;
+  --color-zinc-400: #46545e;
+  --color-zinc-300: #2c3e4a;
+  --color-zinc-200: #1b2c38;
+  --color-zinc-100: #12202a;
+  /* frontier / primary accent */
+  --color-emerald-300: #0b7d57;
+  --color-emerald-400: #0f9f6e;
+  --color-emerald-500: #0d8f63;
+  /* knee blue */
+  --color-cyan-300: #1d4ed8;
+  --color-cyan-400: #1d4ed8;
+  --color-cyan-500: #1e40af;
+  /* pinned/notice amber stays amber; warn (#C2410C) is reserved for over-budget */
+  --color-amber-300: #92400e;
+  --color-amber-400: #b45309;
+  --color-amber-500: #c2410c;
+  --color-red-300: #9a3412;
+  --color-red-400: #c2410c;
+  /* tinted washes for badges/banners */
+  --color-emerald-950: #e9f6f0;
+  --color-emerald-900: #d3ede1;
+  --color-cyan-950: #e9eefb;
+  --color-cyan-900: #dbe4f9;
+  --color-amber-950: #fbf3e4;
+  --color-amber-900: #f6e7c8;
+  --color-red-950: #faece4;
+  --color-red-900: #f5d9c8;
+}
+
+/* The dungeon — explicit operator choice, still first-class. */
+html.dark {
   color-scheme: dark;
+  --color-ground: #09090b;
+  --color-surface: #101013;
+  --color-ink: #f4f4f5;
+  --color-mute: #a1a1aa;
+  --color-line: #26262b;
+  --color-accent: #10b981;
+  --color-knee: #06b6d4;
+  --color-warn: #f59e0b;
+  --color-zinc-950: #09090b;
+  --color-zinc-900: #18181b;
+  --color-zinc-800: #27272a;
+  --color-zinc-700: #3f3f46;
+  --color-zinc-600: #71717a;
+  --color-zinc-500: #a1a1aa;
+  --color-zinc-400: #d4d4d8;
+  --color-zinc-300: #e4e4e7;
+  --color-zinc-200: #f4f4f5;
+  --color-zinc-100: #fafafa;
+  --color-emerald-300: #6ee7b7;
+  --color-emerald-400: #34d399;
+  --color-emerald-500: #10b981;
+  --color-cyan-300: #67e8f9;
+  --color-cyan-400: #22d3ee;
+  --color-cyan-500: #06b6d4;
+  --color-amber-300: #fcd34d;
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #f59e0b;
+  --color-red-300: #fca5a5;
+  --color-red-400: #f87171;
+  --color-emerald-950: #022c22;
+  --color-emerald-900: #064e3b;
+  --color-cyan-950: #083344;
+  --color-cyan-900: #164e63;
+  --color-amber-950: #451a03;
+  --color-amber-900: #78350f;
+  --color-red-950: #450a0a;
+  --color-red-900: #7f1d1d;
 }
 
 body {
-  background-color: #09090b;
-  color: #f4f4f5;
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--color-ground);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
   -webkit-font-smoothing: antialiased;
   margin: 0;
   padding: 0;
 }
 
-/* Custom scrollbars for dense tabular view */
+/* Custom scrollbars, theme-aware */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #18181b;
+  background: var(--color-zinc-900);
 }
 ::-webkit-scrollbar-thumb {
-  background: #3f3f46;
+  background: var(--color-zinc-700);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #52525b;
-}
-
-/* ---- Light theme: dark-first scale inverted, accents darkened for contrast.
-       Tailwind v4 zinc utilities compile to var(--color-zinc-*), so overriding
-       the scale themes every surface and text color at once. ---- */
-html.light {
-  --color-zinc-950: #f7f7f8;
-  --color-zinc-900: #eeeef0;
-  --color-zinc-800: #e2e2e5;
-  --color-zinc-700: #cfcfd4;
-  --color-zinc-600: #8b8b93;
-  --color-zinc-500: #5c5c64;
-  --color-zinc-400: #3f3f46;
-  --color-zinc-300: #2a2a2f;
-  --color-zinc-200: #1c1c20;
-  --color-zinc-100: #131316;
-  --color-emerald-300: #065f46;
-  --color-emerald-400: #047857;
-  --color-emerald-500: #059669;
-  --color-cyan-300: #155e75;
-  --color-cyan-400: #0e7490;
-  --color-cyan-500: #0891b2;
-  --color-amber-300: #92400e;
-  --color-amber-400: #b45309;
-  --color-amber-500: #d97706;
-  --color-red-300: #991b1b;
-  --color-red-400: #b91c1c;
-  --color-emerald-950: #ecfdf5;
-  --color-emerald-900: #d1fae5;
-  --color-cyan-950: #ecfeff;
-  --color-cyan-900: #cffafe;
-  --color-amber-950: #fffbeb;
-  --color-amber-900: #fef3c7;
-  --color-red-950: #fef2f2;
-  --color-red-900: #fee2e2;
+  background: var(--color-zinc-600);
 }
 
 /* Skip link: hidden until focused */
@@ -70,8 +140,8 @@ html.light {
   left: -9999px;
   top: 0;
   z-index: 100;
-  background: #10b981;
-  color: #052e16;
+  background: var(--color-accent);
+  color: #ffffff;
   padding: 0.5rem 1rem;
   font-size: 12px;
   font-weight: 600;
@@ -83,7 +153,7 @@ html.light {
 
 /* Global visible focus ring */
 :focus-visible {
-  outline: 2px solid #10b981;
+  outline: 2px solid var(--color-accent);
   outline-offset: 1px;
 }
 
@@ -97,7 +167,30 @@ html.light {
 }
 
 /* Row state tints: theme-aware (sticky columns need solid backgrounds) */
-.row-knee { background-color: #0c1a1e; }
-html.light .row-knee { background-color: #e0f2fe; }
-.row-pinned { background-color: #221804; }
-html.light .row-pinned { background-color: #fef3c7; }
+.row-knee { background-color: #e9eefb; }
+html.dark .row-knee { background-color: #0c1a1e; }
+.row-pinned { background-color: #fbf3e4; }
+html.dark .row-pinned { background-color: #221804; }
+
+/* Pick domain card color fields — flat same-hue tints, contained (no chrome) */
+.domain-field-coding { background-color: rgba(15, 159, 110, 0.09); border-color: rgba(15, 159, 110, 0.38); }
+.domain-field-general { background-color: rgba(29, 78, 216, 0.07); border-color: rgba(29, 78, 216, 0.34); }
+.domain-field-math { background-color: rgba(180, 83, 9, 0.08); border-color: rgba(180, 83, 9, 0.34); }
+.domain-field-science { background-color: rgba(124, 58, 237, 0.07); border-color: rgba(124, 58, 237, 0.32); }
+html.dark .domain-field-coding { background-color: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.42); }
+html.dark .domain-field-general { background-color: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.4); }
+html.dark .domain-field-math { background-color: rgba(245, 158, 11, 0.09); border-color: rgba(245, 158, 11, 0.4); }
+html.dark .domain-field-science { background-color: rgba(167, 139, 250, 0.09); border-color: rgba(167, 139, 250, 0.38); }
+
+/* Chart skeleton: the scatter never paints as an empty box while ECharts loads */
+.chart-skeleton {
+  background-image:
+    linear-gradient(var(--color-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-line) 1px, transparent 1px);
+  background-size: 48px 40px;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}

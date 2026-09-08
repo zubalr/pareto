@@ -10,18 +10,21 @@ import * as React from "react";
 
 const KEY = "pareto-theme";
 
+/** The product default is light (Phase 11). Dark is an operator toggle. */
+export const DEFAULT_THEME_PREF: ThemePref = "light";
+
 function hasWindow(): boolean {
   return typeof window !== "undefined" && typeof document !== "undefined";
 }
 
 export function getThemePref(): ThemePref {
-  if (!hasWindow()) return "dark";
+  if (!hasWindow()) return DEFAULT_THEME_PREF;
   const stored = window.localStorage.getItem(KEY);
-  return stored === "light" || stored === "dark" || stored === "system" ? stored : "dark";
+  return stored === "light" || stored === "dark" || stored === "system" ? stored : DEFAULT_THEME_PREF;
 }
 
 export function systemPrefersDark(): boolean {
-  if (!hasWindow() || !window.matchMedia) return true;
+  if (!hasWindow() || !window.matchMedia) return false;
   return !window.matchMedia("(prefers-color-scheme: light)").matches;
 }
 
@@ -102,30 +105,30 @@ const DARK_PALETTE: ChartPalette = {
 
 const LIGHT_PALETTE: ChartPalette = {
   dark: false,
-  dominated: "#a1a1aa",
-  frontier: "#059669",
-  frontierBorder: "#065f46",
-  knee: "#0891b2",
-  pin: "#d97706",
-  grid: "#e4e4e7",
-  axis: "#d4d4d8",
-  label: "#52525b",
-  axisName: "#3f3f46",
-  tooltipBg: "#ffffff",
-  tooltipBorder: "#d4d4d8",
-  tooltipText: "#18181b",
-  category: ["#047857", "#0e7490", "#7c3aed", "#b45309", "#be185d", "#1d4ed8"],
+  dominated: "#a89f8d",
+  frontier: "#0f9f6e",
+  frontierBorder: "#0b7d57",
+  knee: "#1d4ed8",
+  pin: "#b45309",
+  grid: "#e3ddcf",
+  axis: "#c8c0ac",
+  label: "#5c6b73",
+  axisName: "#46545e",
+  tooltipBg: "#fffefb",
+  tooltipBorder: "#c8c0ac",
+  tooltipText: "#12202a",
+  category: ["#0f9f6e", "#1d4ed8", "#7c3aed", "#b45309", "#be185d", "#0e7490"],
 };
 
 /** Chart palette for the currently resolved theme (read at chart init). */
 export function chartPalette(): ChartPalette {
-  if (!hasWindow()) return DARK_PALETTE;
+  if (!hasWindow()) return LIGHT_PALETTE;
   return resolveTheme() === "light" ? LIGHT_PALETTE : DARK_PALETTE;
 }
 
 /** Categorical hues per theme (chart slots + colorBy legend). */
 export function categoryPalette(): string[] {
-  if (!hasWindow()) return DARK_PALETTE.category;
+  if (!hasWindow()) return LIGHT_PALETTE.category;
   return chartPalette().category;
 }
 

@@ -3,16 +3,33 @@
 [![Live board](https://img.shields.io/badge/live-board-10b981)](https://pareto.jubairjashim1975.workers.dev)
 [![Today basis](https://img.shields.io/badge/cost-reported_%7C_today-06b6d4)](https://pareto.jubairjashim1975.workers.dev/?costBasis=today)
 
-A dense, dark, operate-mode board that answers one question in ten seconds:
-**who is on the Pareto frontier, where is the knee, and what does it cost?**
+A bright, light-first product that answers one question in ten seconds:
+**what should you run, at what effort, and what does it cost?** — with the full
+Pareto frontier board one click away for operators.
 
 Live: **https://pareto.jubairjashim1975.workers.dev**
 
-The **default board is DeepSWE 1.1** — ingested official leaderboard rows. One point on the board is one *configuration run*:
+## Pick — the front door
+
+`/` is **Pick**: choose what you're doing (coding · general · math · science) and what
+you can spend, and get **one answer** — model, effort, harness, expected score, cost,
+and provenance — plus one cheaper alternative and one stronger over-budget option.
+
+- **Coding** runs against live D1 (DeepSWE 1.1 by default; Terminal, Polyglot, and
+  GitHub-bug sub-intents) with measured $/task from official leaderboard ingests.
+- **General / math / science** read a compiled, attributed public snapshot
+  (MMLU-Pro · AIME 2025 · SciCode / GPQA Diamond); budget there caps the OpenRouter
+  list **$/M output — a price proxy, never $/task**, and rows without a price are
+  omitted rather than zeroed.
+- The **default theme is light** (paper, green accent, blue knee); dark remains a
+  toggle for operators. Charts render light from first paint — never an empty box.
+
+The **Explorer board** (`/explore`, default board **DeepSWE 1.1**) stays for operators:
+one point is one *configuration run* —
 `benchmark version × model × provider × harness version × effort preset → source run`.
 Every number keeps its provenance (`sourceRunId`, official/compiled flag) and every
 telemetry gap is an explicit coverage flag — missing cost, tokens, or latency is
-**omitted, never plotted as zero**.
+**omitted, never plotted as zero**. Old `/?benchmark=…` URLs redirect to `/explore`.
 
 ## Core invariants
 
@@ -34,16 +51,17 @@ telemetry gap is an explicit coverage flag — missing cost, tokens, or latency 
 
 | Route | What it does |
 |---|---|
-| `/` | Explorer — default board: **DeepSWE 1.1**. Pareto scatter (frontier + knee, color by harness/effort), Pass@k / Effort / Resources slots, filter rail, configurations table, multi-pin. Archived seed slices (e.g. Terminal-Bench 4.0) remain selectable and labeled compiled |
+| `/` | **Pick** (default, light theme) — domain → budget → one model × effort answer with provenance, cheaper alternative, and over-budget next step |
+| `/explore` | Explorer — Pareto scatter (frontier + knee, color by harness/effort), Pass@k / Effort / Resources slots, filter rail, configurations table, multi-pin. Default board **DeepSWE 1.1**; archived seed slices remain selectable and labeled compiled |
 | `/finder` | Budget filter: max $/task (+ optional p50 cap) under three intents — max solve, min $/resolved, cheapest at a solve floor |
 | `/compare` | 2–8 pinned configurations side by side, same benchmark only |
 | `/models/$slug` | One base model across harnesses and efforts |
 | `/runs/$id` | Full dossier for one run, with provenance and both cost bases |
-| `/methodology` | Formulas, domination/knee rules, coverage semantics, provenance, canary |
+| `/methodology` | Pick, formulas, domination/knee rules, coverage semantics, provenance, canary |
 
 ## Stack
 
-TanStack Start + Router + Query + Table · Tailwind CSS (dark-first) ·
+TanStack Start + Router + Query + Table · Tailwind CSS (light-first) ·
 Apache ECharts (client-only, dynamically imported — never bundled on the server) ·
 Cloudflare Workers + D1 + KV.
 

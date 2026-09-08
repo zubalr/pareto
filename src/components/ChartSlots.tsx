@@ -37,9 +37,12 @@ function SlotHeader({ title, note }: { title: string; note: string }) {
 export function useEChart(
   buildOption: (echarts: any) => object,
   deps: React.DependencyList
-) {
+): { ref: React.RefObject<HTMLDivElement | null>; ready: boolean } {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<any>(null);
+  // False until the first setOption lands — callers render a skeleton instead
+  // of an empty plot while the client-only ECharts chunk loads.
+  const [ready, setReady] = React.useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -60,6 +63,7 @@ export function useEChart(
         option.animationDuration = prefersReducedMotion() ? 0 : 200;
       }
       chartInstanceRef.current.setOption(option, true);
+      if (isMounted) setReady(true);
     }
     init();
     return () => {
@@ -75,7 +79,23 @@ export function useEChart(
     };
   }, []);
 
-  return chartRef;
+  return { ref: chartRef, ready };
+}
+
+/** Skeleton shown while a chart slot has not set its option yet (never an
+ *  empty painted plot). Overlays the container; charts fade in above it. */
+export function ChartSkeleton({ ready }: { ready: boolean }) {
+  if (ready) return null;
+  return (
+    <div
+      aria-hidden
+      className="chart-skeleton absolute inset-0 rounded flex items-center justify-center"
+    >
+      <span className="text-[11px] font-mono text-mute bg-surface border border-line rounded px-2 py-0.5">
+        loading chart…
+      </span>
+    </div>
+  );
 }
 
 const slotColors = () => categoryPalette();
@@ -112,7 +132,7 @@ export function PassAtKChart({ runs }: { runs: ExplorerRun[] }) {
   const seriesData = allSeries.slice(0, MAX_PASSK_SERIES);
   const hiddenCount = Math.max(0, allSeries.length - seriesData.length);
 
-  const chartRef = useEChart(
+  const { ref: chartRef, ready: chartReady } = useEChart(
     () => {
       const kValues = Array.from(
         new Set(seriesData.flatMap((s) => s.points.map((p) => p.k)))
@@ -216,7 +236,10 @@ export function PassAtKChart({ runs }: { runs: ExplorerRun[] }) {
         title="Pass@k ladder"
         note={`${seriesData.length} shown${hiddenCount > 0 ? ` · ${hiddenCount} hidden` : ""} · x: attempts k · y: cumulative solve %`}
       />
-      <div ref={chartRef} className="flex-1 w-full min-h-[300px]" />
+      <div className="relative flex-1 w-full min-h-[300px]">
+        <ChartSkeleton ready={chartReady} />
+        <div ref={chartRef} className={`w-full h-full ${chartReady ? "" : "opacity-0"}`} />
+      </div>
     </div>
   );
 }
@@ -242,7 +265,7 @@ export function EffortChart({ runs }: { runs: ExplorerRun[] }) {
   }
   const qualifying = Array.from(groups.values()).filter((g) => g.byEffort.size >= 2);
 
-  const chartRef = useEChart(
+  const { ref: chartRef, ready: chartReady } = useEChart(
     () => {
       const effortAxis = Array.from(
         new Set(qualifying.flatMap((g) => Array.from(g.byEffort.keys())))
@@ -340,7 +363,10 @@ export function EffortChart({ runs }: { runs: ExplorerRun[] }) {
         title="Effort curve"
         note={`${qualifying.length} series · x: effort preset · y: solve %`}
       />
-      <div ref={chartRef} className="flex-1 w-full min-h-[300px]" />
+      <div className="relative flex-1 w-full min-h-[300px]">
+        <ChartSkeleton ready={chartReady} />
+        <div ref={chartRef} className={`w-full h-full ${chartReady ? "" : "opacity-0"}`} />
+      </div>
     </div>
   );
 }
@@ -352,7 +378,7 @@ export function EffortChart({ runs }: { runs: ExplorerRun[] }) {
 export function ResourceChart({ runs }: { runs: ExplorerRun[] }) {
   const rc = buildResourceCompare(runs);
 
-  const chartRef = useEChart(
+  const { ref: chartRef, ready: chartReady } = useEChart(
     () => {
       const groupDefs: Array<{ key: "usd" | "tokens" | "wallclock"; label: string }> = [
         { key: "usd", label: "USD/task" },
@@ -368,7 +394,7 @@ export function ResourceChart({ runs }: { runs: ExplorerRun[] }) {
           return m ? Number(m.mult.toFixed(3)) : null;
         }),
         itemStyle: {
-          color: c.isBaseline ? "#10b981" : slotColors()[(i + 1) % slotColors().length],
+          color: c.isBaseline ? chartPalette().frontier : slotColors()[(i + 1) % slotColors().length],
           opacity: c.isBaseline ? 1 : 0.85,
         },
         barMaxWidth: 22,
@@ -476,7 +502,10 @@ export function ResourceChart({ runs }: { runs: ExplorerRun[] }) {
           ))}
         </div>
       )}
-      <div ref={chartRef} className="flex-1 w-full min-h-[280px]" />
+      <div className="relative flex-1 w-full min-h-[280px]">
+        <ChartSkeleton ready={chartReady} />
+        <div ref={chartRef} className={`w-full h-full ${chartReady ? "" : "opacity-0"}`} />
+      </div>
     </div>
   );
 }

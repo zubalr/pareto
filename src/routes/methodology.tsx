@@ -186,8 +186,106 @@ function MethodologyPage() {
         </div>
       </Section>
 
-      {/* 5. Finder */}
-      <Section n="5" title="The Finder — a deterministic budget filter" accent="text-cyan-400">
+      {/* 5. Pick */}
+      <Section n="5" title="Pick — domain, budget, one answer" accent="text-emerald-400">
+        <p className="text-xs text-zinc-400 leading-relaxed">
+          <Link to="/" className="underline hover:text-zinc-300">
+            /
+          </Link>{" "}
+          is Pick: you say <strong>what you are doing</strong> (domain) and{" "}
+          <strong>what you can spend</strong> (budget), and the page answers with{" "}
+          <strong>one configuration</strong> — model, effort preset, harness (if agentic), expected
+          score, cost, provenance, and why — plus one cheaper alternative and one stronger
+          over-budget option. Pick is a recommendation layer over the same data as the Explorer; it
+          never forks the ranker: selection is the Finder's deterministic rules (§6) applied to one
+          domain slice, with the quality floor applied as a hard filter before ranking.
+        </p>
+        <div>
+          <h3 className="font-semibold text-xs text-zinc-200">Domain → bench map (fixed, not improvised)</h3>
+          <div className="overflow-x-auto mt-2">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead className="text-[11px] uppercase tracking-wider text-zinc-500">
+                <tr>
+                  <th className="px-2 py-1">Domain</th>
+                  <th className="px-2 py-1">Primary board</th>
+                  <th className="px-2 py-1">Sub-intents</th>
+                  <th className="px-2 py-1">Cost semantics</th>
+                </tr>
+              </thead>
+              <tbody className="text-zinc-300">
+                <tr className="border-t border-zinc-800/80">
+                  <td className="px-2 py-1.5 font-semibold">Coding</td>
+                  <td className="px-2 py-1.5">DeepSWE 1.1 (113 tasks, live D1)</td>
+                  <td className="px-2 py-1.5">Terminal (Harbor TB 2.0) · Polyglot (Aider) · GitHub bugs (SWE-bench Verified)</td>
+                  <td className="px-2 py-1.5">measured $/task (reported basis)</td>
+                </tr>
+                <tr className="border-t border-zinc-800/80">
+                  <td className="px-2 py-1.5 font-semibold">General</td>
+                  <td className="px-2 py-1.5">MMLU-Pro (TIGER-Lab compiled snapshot)</td>
+                  <td className="px-2 py-1.5">— (IFEval not in the snapshot)</td>
+                  <td className="px-2 py-1.5 text-amber-400">list $/M output — price proxy, not $/task</td>
+                </tr>
+                <tr className="border-t border-zinc-800/80">
+                  <td className="px-2 py-1.5 font-semibold">Math</td>
+                  <td className="px-2 py-1.5">AIME 2025 (MathArena frozen snapshot)</td>
+                  <td className="px-2 py-1.5">—</td>
+                  <td className="px-2 py-1.5 text-amber-400">list $/M output — price proxy</td>
+                </tr>
+                <tr className="border-t border-zinc-800/80">
+                  <td className="px-2 py-1.5 font-semibold">Science</td>
+                  <td className="px-2 py-1.5">SciCode (Kaggle Open Benchmarks snapshot)</td>
+                  <td className="px-2 py-1.5">GPQA Diamond — <strong>saturated</strong> (~95% top; AA retired it from its Index)</td>
+                  <td className="px-2 py-1.5 text-amber-400">list $/M output — price proxy</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <ul className="list-disc list-inside text-xs text-zinc-400 space-y-1.5 leading-relaxed">
+          <li>
+            <strong>Coding answers come from live D1</strong> — the official leaderboard ingests,
+            with measured $/task. The agentic slice is matched at <code className="text-zinc-200">max</code>{" "}
+            effort so recommendations are comparable; when the same model has an{" "}
+            <code className="text-zinc-200">xhigh</code> run it is shown as the separate
+            "spend more" step, never mixed into the same sentence as the max answer.
+          </li>
+          <li>
+            <strong>General / math / science come from a compiled, attributed snapshot</strong>{" "}
+            (<code className="text-zinc-200">src/data/compiled-domain-scores.ts</code>, retrieved{" "}
+            2026-09-08, sources + licenses inline). It is not refreshed by a cron. Snapshot model
+            names are mapped onto existing D1 slugs when the model is obviously the same, so a
+            snapshot answer can still link to a D1 dossier.
+          </li>
+          <li>
+            <strong>The price proxy rule:</strong> snapshot budgets cap the model's OpenRouter{" "}
+            <em>list $/M output</em> price — a proxy for spend, never a $/task figure. $/task only
+            exists where agent runs measured it (coding). Rows without a list price are{" "}
+            <strong>omitted from budget filtering</strong>, never priced at zero.
+          </li>
+          <li>
+            <strong>Saturation:</strong> AIME 2025's top sits at 100% and MathArena has frozen the
+            board (deprecated in favor of AIME 2026); GPQA Diamond's top sits near 95%. On ceiling
+            boards, tiny deltas are noise — Pick shows the board with a ceiling note rather than
+            pretending ordering is meaningful up there.
+          </li>
+          <li>
+            <strong>Not an AA index, no AA private evals.</strong> Pick never claims the Artificial
+            Analysis Intelligence Index (40% of which is private), never scrapes AA, and never
+            uses AA-private boards (AA-Briefcase, GDP.pdf, Omniscience) as sub-intents.
+          </li>
+        </ul>
+        <p className="text-xs text-zinc-400 leading-relaxed">
+          Worked example (live D1): coding → budget $2/task → floor 50% → best under budget on the
+          max-effort DeepSWE 1.1 slice returns <strong>GLM-5.3 Flash</strong> (mini-SWE-agent · max ·
+          63.4% · $0.48/task · run{" "}
+          <code className="text-zinc-200">01J8RUNDS6314BEDBMINISWEAG</code>), with DeepSeek V4 Flash
+          (53.3% · $0.10/task) as the cheaper alternative and GPT-5.6 Luna (67.2% · $3.03/task)
+          flagged as the over-budget next step up.
+        </p>
+      </Section>
+
+      {/* 6. Finder */}
+      <Section n="6" title="The Finder — a deterministic budget filter" accent="text-cyan-400">
         <p className="text-xs text-zinc-400 leading-relaxed">
           <Link to="/finder" className="underline hover:text-zinc-300">
             /finder
@@ -231,8 +329,8 @@ function MethodologyPage() {
         </p>
       </Section>
 
-      {/* 6. Seed provenance */}
-      <Section n="6" title="Seed data provenance" accent="text-zinc-100">
+      {/* 7. Seed provenance */}
+      <Section n="7" title="Seed data provenance" accent="text-zinc-100">
         <p className="text-xs text-zinc-400 leading-relaxed">
           The default board (DeepSWE 1.1) — and most slices — are now <strong>official
           ingests</strong>: DeepSWE, Harbor/Terminal-Bench 2.0, the Aider polyglot leaderboard, and
@@ -253,7 +351,7 @@ function MethodologyPage() {
       </Section>
 
       {/* 7. Canary */}
-      <Section n="7" title="Benchmark integrity & canary" accent="text-amber-400">
+      <Section n="8" title="Benchmark integrity & canary" accent="text-amber-400">
         <div className="bg-amber-950/20 border border-amber-500/20 p-3 rounded text-xs text-amber-200/90 leading-relaxed">
           <strong>Strict isolation policy:</strong> benchmark task prompts, statements, test cases,
           and solutions — especially Terminal-Bench and SWE-bench task text — must never be copied,
@@ -264,8 +362,8 @@ function MethodologyPage() {
         </div>
       </Section>
 
-      {/* 8. Scope */}
-      <Section n="8" title="What this site is not" accent="text-zinc-100">
+      {/* 9. Scope */}
+      <Section n="9" title="What this site is not" accent="text-zinc-100">
         <ul className="list-disc list-inside text-xs text-zinc-400 space-y-1.5 leading-relaxed">
           <li>
             <strong>Not an official leaderboard.</strong> We run no primary evaluations and are not
@@ -284,7 +382,7 @@ function MethodologyPage() {
           </li>
           <li>
             <strong>Not a subjective recommender.</strong> The frontier and knee are purely
-            geometric, and the Finder is a transparent budget filter with a stated ranking rule (§5)
+            geometric, and the Finder and Pick are deterministic filters with stated ranking rules (§5–6)
             — no editorial weighting, sponsored placement, or "best model" badge exists.
           </li>
           <li>

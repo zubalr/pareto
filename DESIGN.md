@@ -5,11 +5,12 @@ layout and chart encodings, color/opacity rules, empty & coverage states, and th
 specification for future charts. Written so the next session (human or agent) can
 reconstruct every visual decision without re-deriving it.
 
-**Status: Phase 11.** `/` is **Pick** — light-first, vibrant, domain → budget → one
-answer. The Explorer board lives at `/explore` (old `/?benchmark=…` URLs redirect
-there, params preserved). Phase 10 theme toggle, CSV export, skip link, density, and
-how-to-read carry over. **Default theme is now light**; dark remains an operator
-toggle, not the first impression.
+**Status: Phase 12 (freshness law).** `/` is **Pick** — light-first, vibrant,
+domain → budget → one answer. The Explorer board lives at `/explore` (old
+`/?benchmark=…` URLs redirect there, params preserved). **Default theme is light**;
+dark remains an operator toggle. Phase 12: only boards whose upstream last published
+on/after **2026-03-08** are recommended — thrown boards are gone from Pick, selectors,
+and defaults (dates + verdicts: `src/domains/registry.ts`).
 
 ---
 
@@ -25,10 +26,22 @@ and why, plus one cheaper alternative and one stronger over-budget option. URL s
 
 | Domain | Primary board (Pick uses this) | Sub-intents | Cost semantics |
 |---|---|---|---|
-| **Coding** | DeepSWE 1.1 (113, live D1) | Terminal (Harbor TB 2.0) · Polyglot (Aider) · GitHub bugs (SWE-bench Verified) | measured $/task (reported) |
-| **General** | MMLU-Pro (TIGER-Lab snapshot) | — (IFEval absent from snapshot) | list $/M output — **price proxy, not $/task** |
-| **Math** | AIME 2025 (MathArena frozen snapshot) | — | list $/M output — price proxy |
-| **Science** | SciCode (Kaggle Open Benchmarks snapshot) | GPQA Diamond (**saturated**, ~95% top) | list $/M output — price proxy |
+| **Coding** | DeepSWE 1.1 (113, live D1) | Terminal — **honest empty** (no official TB 4.0 ingested) · GitHub bugs (SWE-bench Verified). Polyglot omitted (stale upstream) | measured $/task (reported) |
+| **General** | MMLU-Pro (TIGER-Lab snapshot, last publish 2026-03-11) | — | list $/M output — **price proxy, not $/task** |
+| **Math** | **AIME 2026** (MathArena live board) | — | list $/M output — price proxy |
+| **Science** | SciCode (Kaggle snapshot, updated 2026-08-28) | — (GPQA Diamond thrown: retired as saturated) | list $/M output — price proxy |
+
+**Freshness law (Phase 12).** A board is eligible only if its upstream leaderboard last
+published on/after the cutoff **2026-03-08** and it is not frozen, deprecated,
+superseded, or retired-as-saturated. Thrown (verified 2026-09-08): AIME 2025 (frozen,
+superseded by AIME 2026), GPQA Diamond (saturated ~95%), Aider Polyglot (upstream YAML
+last row 2025-10-03), Harbor TB 2.0 (superseded by TB 4.0), TB 4.0 seed (compiled
+fixtures, not a living board). Kept: DeepSWE 1.1 (2026-09-07), MMLU-Pro (2026-03-11),
+AIME 2026 (live), SciCode (2026-08-28), SWE-bench Verified (2026-09-03). D1 may retain
+thrown rows; buried `?benchmark=` URLs still resolve (no 404s) with a "Retired board"
+notice, but retired boards never appear in selectors, never default (Compare now
+defaults to DeepSWE), and never get recommended. Every visible board carries an
+**Updated** chip with its verified date.
 
 - **Coding is wired to live D1** via the read-only Finder server fn; the agentic slice
   is matched at `max` effort for comparability. When the winning model has an `xhigh`
@@ -37,9 +50,10 @@ and why, plus one cheaper alternative and one stronger over-budget option. URL s
   all-effort slices; every answer still names its effort.
 - **General/math/science read a compiled, attributed snapshot**
   (`src/data/compiled-domain-scores.ts`, < 150 KB, retrieved 2026-09-08; sources,
-  licenses, and staleness notes inline in `COMPILED_SOURCES`). Not a cron. Snapshot
+  last-publish dates, and licenses inline in `COMPILED_SOURCES`). Not a cron. Snapshot
   rows map onto existing D1 slugs when the model is obviously the same, so snapshot
-  answers keep dossier links.
+  answers keep dossier links. Phase 12: aime-2025 and gpqa-diamond are deleted from
+  the snapshot; models that only scored there are dropped.
 - **Proxy rule:** snapshot budgets cap OpenRouter list $/M output — labeled
   "price proxy, not $/task" everywhere it appears. Rows without a price are omitted
   from budget filtering (the same rule as a coding run without cost telemetry), never
@@ -604,3 +618,31 @@ working as designed, local-only.
 | 110 | Mobile 375px: no horizontal scroll (nav overflow fixed), domain cards stack, answer card renders before the controls | PASS (after fix) |
 | 111 | Methodology §5 Pick (domain→bench map table, proxy vs $/task, saturation, not-AA), DESIGN.md §Pick + §7 rewrite, README (home is Pick, light default), docs/sources.md §8 snapshot table | PASS |
 | 112 | `pnpm test --run` | PASS (92 incl. 11 new pick/theme tests) |
+
+### Phase 12 — freshness law QA (production, 2026-09-08)
+
+Shipped: `src/domains/registry.ts` (freshAsOf + droppedBecause per board; cutoff
+2026-03-08, verified 2026-09-08), snapshot rebuilt — AIME 2025 and GPQA Diamond
+deleted, AIME 2026 (MathArena live board) added, orphan models dropped (60 rows,
+18.3 KB) — Math domain → AIME 2026, Science → SciCode only (GPQA sub-intent gone),
+Coding Terminal intent → honest empty chip (no official TB 4.0 in D1; seed is not
+it), Polyglot intent omitted (upstream YAML last row 2025-10-03, repo commit
+2025-10-04), Explorer/Finder/Compare selectors list KEEP boards only, buried
+`?benchmark=` URLs for retired ids still resolve with a "Retired board" notice,
+Compare/Finder server defaults moved off the TB 4.0 seed to DeepSWE, Updated chips
+on domain cards + answer card + Explorer strip, Methodology §5 rewritten (verdict
+table with dates), README freshness section, docs/sources.md §8 rewritten.
+
+| # | Check (production) | Result |
+|---|---|---|
+| 113 | Freshness re-verification with cited dates: DeepSWE leaderboard-live.json Last-Modified 2026-09-07; MMLU-Pro HF last update 2026.03.11; SciCode Kaggle "Last updated August 28, 2026"; Aider YAML last row 2025-10-03 / commit 2025-10-04; SWE-bench experiments last commit 2026-09-03; MathArena AIME 2026 live table fetched | PASS |
+| 114 | Unit: aime-2025 and gpqa-diamond keys are not in the compiled snapshot nor the keep set; TB2/TB4/aider ids are not Pick intents; INTENT_BENCH.terminal is undefined (honest empty) | PASS |
+| 115 | Unit: Pick math draws only from AIME 2026 — no `matharena-aime-2025` source rows; the 100% GPT-5.2 (AIME 2025) answer is gone | PASS |
+| 116 | Unit: coding $2 / 50% floor on DeepSWE still returns real run id `01J8RUNDS6314BEDBMINISWEAG` | PASS |
+| 117 | `pnpm test --run` | PASS (95 incl. 4 new freshness-law tests) |
+| 118 | Production `/`: four domain cards with Updated chips (coding 2026-09-07, general 2026-03-11, math 2026-09-08, science 2026-08-28); math card says AIME 2026; science card notes GPQA retired | PASS |
+| 119 | Production Pick math: answers from AIME 2026 (ceiling note visible), never the 2025 board; science shows SciCode only — no GPQA chip anywhere | PASS |
+| 120 | Production Pick coding: Terminal chip renders the honest empty ("No fresh Terminal board — yet…") with the seed/superseded explanation; Polyglot chip gone; GitHub bugs answers from SWE-bench Verified; agentic $2 path still returns GLM-5.3 Flash $0.48/task from live D1 | PASS |
+| 121 | Production `/explore`: selector lists DeepSWE 1.1 + SWE-bench Verified only (no TB 2.0, no TB 4.0 seed, no Aider); Updated chip shows the active board's verified date; buried `/explore?benchmark=<TB2 id>` still renders with the "Retired board" notice | PASS |
+| 122 | `/finder` + `/compare`: fresh-only selectors; Compare without `?benchmark=` defaults to DeepSWE (was TB 4.0 seed) | PASS |
+| 123 | Methodology §5 verdict table + domain map + retired-≠-deleted rule; README freshness section; docs/sources.md §8 rewritten; DESIGN.md §Pick updated | PASS |

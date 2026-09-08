@@ -15,14 +15,26 @@ Live: **https://pareto.jubairjashim1975.workers.dev**
 you can spend, and get **one answer** — model, effort, harness, expected score, cost,
 and provenance — plus one cheaper alternative and one stronger over-budget option.
 
-- **Coding** runs against live D1 (DeepSWE 1.1 by default; Terminal, Polyglot, and
-  GitHub-bug sub-intents) with measured $/task from official leaderboard ingests.
+- **Coding** runs against live D1 (DeepSWE 1.1 by default; GitHub bugs via
+  SWE-bench Verified) with measured $/task from official leaderboard ingests.
 - **General / math / science** read a compiled, attributed public snapshot
-  (MMLU-Pro · AIME 2025 · SciCode / GPQA Diamond); budget there caps the OpenRouter
-  list **$/M output — a price proxy, never $/task**, and rows without a price are
+  (MMLU-Pro · AIME 2026 · SciCode); budget there caps the OpenRouter list
+  **$/M output — a price proxy, never $/task**, and rows without a price are
   omitted rather than zeroed.
 - The **default theme is light** (paper, green accent, blue knee); dark remains a
   toggle for operators. Charts render light from first paint — never an empty box.
+
+## Freshness law (Phase 12)
+
+Models move every week. **Only boards whose upstream leaderboard last published on or
+after 2026-03-08 are recommended** — and only if they are not frozen, deprecated,
+superseded, or retired-as-saturated. Kept: DeepSWE 1.1 (2026-09-07), MMLU-Pro
+(2026-03-11), AIME 2026 (live), SciCode (2026-08-28), SWE-bench Verified (2026-09-03).
+Thrown from Pick and selectors: AIME 2025 (frozen), GPQA Diamond (saturated), Aider
+Polyglot (upstream stale since 2025-10), Harbor TB 2.0 (superseded by TB 4.0), and the
+TB 4.0 seed fixtures (not a living board). Buried `?benchmark=` URLs for retired ids
+still resolve so links don't 404 — they just never appear as options. Verdicts and
+dates: `src/domains/registry.ts`.
 
 The **Explorer board** (`/explore`, default board **DeepSWE 1.1**) stays for operators:
 one point is one *configuration run* —
@@ -52,7 +64,7 @@ telemetry gap is an explicit coverage flag — missing cost, tokens, or latency 
 | Route | What it does |
 |---|---|
 | `/` | **Pick** (default, light theme) — domain → budget → one model × effort answer with provenance, cheaper alternative, and over-budget next step |
-| `/explore` | Explorer — Pareto scatter (frontier + knee, color by harness/effort), Pass@k / Effort / Resources slots, filter rail, configurations table, multi-pin. Default board **DeepSWE 1.1**; archived seed slices remain selectable and labeled compiled |
+| `/explore` | Explorer — Pareto scatter (frontier + knee, color by harness/effort), Pass@k / Effort / Resources slots, filter rail, configurations table, multi-pin. Default board **DeepSWE 1.1**. Selector lists freshness-law KEEP boards only; retired slices stay reachable via buried `?benchmark=` URLs and are never defaults |
 | `/finder` | Budget filter: max $/task (+ optional p50 cap) under three intents — max solve, min $/resolved, cheapest at a solve floor |
 | `/compare` | 2–8 pinned configurations side by side, same benchmark only |
 | `/models/$slug` | One base model across harnesses and efforts |

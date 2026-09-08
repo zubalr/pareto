@@ -232,18 +232,27 @@ Comprehensive audit of remaining benchmarks named in the original Pareto vision:
 
 ---
 
-## 8. Compiled Pick snapshot (`src/data/compiled-domain-scores.ts`) — Phase 11
+## 8. Compiled Pick snapshot (`src/data/compiled-domain-scores.ts`) — Phase 12 freshness law
 
 Not an ingest: a hand-compiled, attributed static table (retrieved **2026-09-08**) that
-powers Pick's general / math / science domains. Model names are mapped onto existing
+powers Pick's general / math / science domains. Phase 12 law: boards stay only while
+their upstream last publish is on/after **2026-03-08** and they are not frozen,
+deprecated, superseded, or retired-as-saturated. Model names map onto existing
 `models` slugs when the model is obviously the same; rows are coverage-flagged (a
 missing score or list price is absent data, never zero). Regeneration is manual; the
 banner on `/` states "not a daily feed".
 
-| Board | Source (opened & compiled) | Notes / caveats |
-|---|---|---|
-| MMLU-Pro | TIGER-Lab official results CSV — `https://huggingface.co/datasets/TIGER-Lab/mmlu_pro_leaderboard_submission` (dataset MIT) | Mix of TIGER-Lab-run and self-reported rows; the `note` field marks self-reported. Frontier table lags the newest models (last update 2026-03). |
-| AIME 2025 | MathArena leaderboard — `https://matharena.ai/?comp=aime--aime_2025` | MathArena has marked the competition **deprecated/frozen** (superseded by AIME 2026), so newer models are absent by construction; top is at the 100% ceiling. Config suffixes (high/xhigh/think) kept as the effort note; best config per model. |
-| SciCode | Kaggle Open Benchmarks — SciCode Subproblem Standard — `https://www.kaggle.com/benchmarks/open-benchmarks/scicode-subproblem-standard` | Kaggle-run subproblem-level evaluation (338 subproblems), last updated 2026-08-28 — **not** the Artificial Analysis run. Only the 11 rows visible unauthenticated are compiled (53 evaluated upstream). |
-| GPQA Diamond | Kaggle Open Benchmarks — GPQA Diamond Zero-Shot — `https://www.kaggle.com/benchmarks/open-benchmarks/gpqa-zero-shot-diamond-set` | Saturated (~95% top; AA retired GPQA from its Index) — offered as a science sub-intent only. 11 public rows compiled (55 evaluated). |
-| priceOut | OpenRouter Models API — `https://openrouter.ai/api/v1/models` | List completion price × 1M. **Price proxy for budgeting — never $/task.** Delisted models have no price and are omitted from budget filtering. |
+| Board | Verdict | Source (opened & compiled) | Verified freshness / notes |
+|---|---|---|---|
+| MMLU-Pro | **KEEP** | TIGER-Lab official results CSV — `https://huggingface.co/datasets/TIGER-Lab/mmlu_pro_leaderboard_submission` (dataset MIT) | Last leaderboard update **2026.03.11** (on/after cutoff, barely). Mix of TIGER-Lab-run and self-reported rows (`note` marks self-reported). |
+| AIME 2026 | **KEEP** | MathArena live leaderboard — `https://matharena.ai/?comp=aime--aime_2026` | Live board, retrieved **2026-09-08**. Top sits at the 100% ceiling (ceiling note shown). Replaces the thrown AIME 2025. |
+| SciCode | **KEEP** | Kaggle Open Benchmarks — SciCode Subproblem Standard — `https://www.kaggle.com/benchmarks/open-benchmarks/scicode-subproblem-standard` | "Last updated **August 28, 2026**" (verified 2026-09-08). Kaggle-run subproblem-level eval (338 subproblems) — NOT the AA run. 11 public rows compiled (53 evaluated). |
+| priceOut | — | OpenRouter Models API — `https://openrouter.ai/api/v1/models` | List completion price × 1M, retrieved 2026-09-08. **Price proxy for budgeting — never $/task.** Delisted models have no price and are omitted from budget filtering. |
+| AIME 2025 | **THROWN** (was Phase 11) | MathArena `?comp=aime--aime_2025` | Deprecated/frozen upstream (superseded by AIME 2026); newer models absent by construction. Removed from the snapshot entirely. |
+| GPQA Diamond | **THROWN** (was Phase 11) | Kaggle Open Benchmarks GPQA Diamond Zero-Shot | Retired as saturated (~95% ceiling does not rank new models). Removed from the snapshot entirely. |
+
+Models that only scored on thrown boards are dropped from the snapshot. Verdict
+metadata (`freshAsOf`, `droppedBecause`) also lives in `src/domains/registry.ts` for
+D1 boards (DeepSWE 1.1 keep 2026-09-07; SWE-bench Verified keep 2026-09-03; Aider
+Polyglot throw — upstream YAML stale since 2025-10-03; Harbor TB 2.0 throw —
+superseded; TB 4.0 seed throw — compiled fixtures, not a living board).

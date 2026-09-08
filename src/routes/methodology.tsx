@@ -201,7 +201,94 @@ function MethodologyPage() {
           domain slice, with the quality floor applied as a hard filter before ranking.
         </p>
         <div>
-          <h3 className="font-semibold text-xs text-zinc-200">Domain → bench map (fixed, not improvised)</h3>
+          <h3 className="font-semibold text-xs text-zinc-200">
+            Freshness law (Phase 12): only boards updated in the last 6 months
+          </h3>
+          <p className="text-xs text-zinc-400 leading-relaxed mt-1">
+            Models move every week; a stale board is a museum. Pick and the Explorer selector
+            carry <strong>only boards whose upstream leaderboard last published on/after{" "}
+            <code className="text-zinc-200">{`2026-03-08`}</code></strong>{" "}
+            and that are not frozen, deprecated, superseded, or retired-as-saturated. The verdict
+            per board — with the dates we verified on 2026-09-08 — lives in{" "}
+            <code className="text-zinc-200">src/domains/registry.ts</code>:
+          </p>
+          <div className="overflow-x-auto mt-2">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead className="text-[11px] uppercase tracking-wider text-zinc-500">
+                <tr>
+                  <th className="px-2 py-1">Board</th>
+                  <th className="px-2 py-1">Verdict</th>
+                  <th className="px-2 py-1">Verified freshness</th>
+                  <th className="px-2 py-1">Why</th>
+                </tr>
+              </thead>
+              <tbody className="text-zinc-300">
+                <tr className="border-t border-zinc-800/80">
+                  <td className="px-2 py-1.5">DeepSWE 1.1</td>
+                  <td className="px-2 py-1.5 text-emerald-400 font-semibold">KEEP</td>
+                  <td className="px-2 py-1.5 font-mono">2026-09-07</td>
+                  <td className="px-2 py-1.5">leaderboard-live.json Last-Modified; site "updated September 3, 2026"</td>
+                </tr>
+                <tr className="border-t border-zinc-800/80">
+                  <td className="px-2 py-1.5">MMLU-Pro (TIGER-Lab)</td>
+                  <td className="px-2 py-1.5 text-emerald-400 font-semibold">KEEP</td>
+                  <td className="px-2 py-1.5 font-mono">2026-03-11</td>
+                  <td className="px-2 py-1.5">last leaderboard update on/after the cutoff (barely — re-checked each compile)</td>
+                </tr>
+                <tr className="border-t border-zinc-800/80">
+                  <td className="px-2 py-1.5">AIME 2026 (MathArena)</td>
+                  <td className="px-2 py-1.5 text-emerald-400 font-semibold">KEEP</td>
+                  <td className="px-2 py-1.5 font-mono">2026-09-08</td>
+                  <td className="px-2 py-1.5">live board; replaces the frozen AIME 2025</td>
+                </tr>
+                <tr className="border-t border-zinc-800/80">
+                  <td className="px-2 py-1.5">SciCode (Kaggle Open Benchmarks)</td>
+                  <td className="px-2 py-1.5 text-emerald-400 font-semibold">KEEP</td>
+                  <td className="px-2 py-1.5 font-mono">2026-08-28</td>
+                  <td className="px-2 py-1.5">"Last updated August 28, 2026" on the public page</td>
+                </tr>
+                <tr className="border-t border-zinc-800/80">
+                  <td className="px-2 py-1.5">SWE-bench Verified</td>
+                  <td className="px-2 py-1.5 text-emerald-400 font-semibold">KEEP</td>
+                  <td className="px-2 py-1.5 font-mono">2026-09-03</td>
+                  <td className="px-2 py-1.5">experiments repo still receiving commits into September 2026</td>
+                </tr>
+                <tr className="border-t border-zinc-800/80">
+                  <td className="px-2 py-1.5">AIME 2025 (MathArena)</td>
+                  <td className="px-2 py-1.5 text-warn font-semibold">THROW</td>
+                  <td className="px-2 py-1.5 font-mono">frozen</td>
+                  <td className="px-2 py-1.5">deprecated upstream, superseded by AIME 2026; newer models absent by construction</td>
+                </tr>
+                <tr className="border-t border-zinc-800/80">
+                  <td className="px-2 py-1.5">GPQA Diamond</td>
+                  <td className="px-2 py-1.5 text-warn font-semibold">THROW</td>
+                  <td className="px-2 py-1.5 font-mono">saturated</td>
+                  <td className="px-2 py-1.5">retired as saturated (~95% ceiling does not rank new models)</td>
+                </tr>
+                <tr className="border-t border-zinc-800/80">
+                  <td className="px-2 py-1.5">Aider Polyglot</td>
+                  <td className="px-2 py-1.5 text-warn font-semibold">THROW</td>
+                  <td className="px-2 py-1.5 font-mono">2025-10-03</td>
+                  <td className="px-2 py-1.5">upstream YAML last gained a row 2025-10-03 (repo commit 2025-10-04) — before the cutoff</td>
+                </tr>
+                <tr className="border-t border-zinc-800/80">
+                  <td className="px-2 py-1.5">Harbor TB 2.0</td>
+                  <td className="px-2 py-1.5 text-warn font-semibold">THROW</td>
+                  <td className="px-2 py-1.5 font-mono">superseded</td>
+                  <td className="px-2 py-1.5">current Terminal-Bench family is 4.0; TB 2.0 is frozen</td>
+                </tr>
+                <tr className="border-t border-zinc-800/80">
+                  <td className="px-2 py-1.5">TB 4.0 seed</td>
+                  <td className="px-2 py-1.5 text-warn font-semibold">THROW</td>
+                  <td className="px-2 py-1.5 font-mono">compiled</td>
+                  <td className="px-2 py-1.5">10 hand-compiled fixtures, not a living official board — never relabeled "latest TB 4.0"</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <h3 className="font-semibold text-xs text-zinc-200">Domain → bench map after the law</h3>
           <div className="overflow-x-auto mt-2">
             <table className="w-full text-left border-collapse text-xs">
               <thead className="text-[11px] uppercase tracking-wider text-zinc-500">
@@ -216,25 +303,25 @@ function MethodologyPage() {
                 <tr className="border-t border-zinc-800/80">
                   <td className="px-2 py-1.5 font-semibold">Coding</td>
                   <td className="px-2 py-1.5">DeepSWE 1.1 (113 tasks, live D1)</td>
-                  <td className="px-2 py-1.5">Terminal (Harbor TB 2.0) · Polyglot (Aider) · GitHub bugs (SWE-bench Verified)</td>
+                  <td className="px-2 py-1.5">Terminal — honest empty until official TB 4.0 is ingested · GitHub bugs (SWE-bench Verified). Polyglot omitted (stale upstream)</td>
                   <td className="px-2 py-1.5">measured $/task (reported basis)</td>
                 </tr>
                 <tr className="border-t border-zinc-800/80">
                   <td className="px-2 py-1.5 font-semibold">General</td>
                   <td className="px-2 py-1.5">MMLU-Pro (TIGER-Lab compiled snapshot)</td>
-                  <td className="px-2 py-1.5">— (IFEval not in the snapshot)</td>
+                  <td className="px-2 py-1.5">—</td>
                   <td className="px-2 py-1.5 text-amber-400">list $/M output — price proxy, not $/task</td>
                 </tr>
                 <tr className="border-t border-zinc-800/80">
                   <td className="px-2 py-1.5 font-semibold">Math</td>
-                  <td className="px-2 py-1.5">AIME 2025 (MathArena frozen snapshot)</td>
+                  <td className="px-2 py-1.5">AIME 2026 (MathArena live board)</td>
                   <td className="px-2 py-1.5">—</td>
                   <td className="px-2 py-1.5 text-amber-400">list $/M output — price proxy</td>
                 </tr>
                 <tr className="border-t border-zinc-800/80">
                   <td className="px-2 py-1.5 font-semibold">Science</td>
                   <td className="px-2 py-1.5">SciCode (Kaggle Open Benchmarks snapshot)</td>
-                  <td className="px-2 py-1.5">GPQA Diamond — <strong>saturated</strong> (~95% top; AA retired it from its Index)</td>
+                  <td className="px-2 py-1.5">— (GPQA Diamond thrown: saturated)</td>
                   <td className="px-2 py-1.5 text-amber-400">list $/M output — price proxy</td>
                 </tr>
               </tbody>
@@ -252,9 +339,10 @@ function MethodologyPage() {
           <li>
             <strong>General / math / science come from a compiled, attributed snapshot</strong>{" "}
             (<code className="text-zinc-200">src/data/compiled-domain-scores.ts</code>, retrieved{" "}
-            2026-09-08, sources + licenses inline). It is not refreshed by a cron. Snapshot model
-            names are mapped onto existing D1 slugs when the model is obviously the same, so a
-            snapshot answer can still link to a D1 dossier.
+            2026-09-08, sources + last-publish dates + licenses inline). It is not refreshed by a
+            cron. Snapshot model names are mapped onto existing D1 slugs when the model is
+            obviously the same, so a snapshot answer can still link to a D1 dossier. Models that
+            only scored on thrown boards (e.g. AIME 2025's frozen roster) are dropped.
           </li>
           <li>
             <strong>The price proxy rule:</strong> snapshot budgets cap the model's OpenRouter{" "}
@@ -263,24 +351,31 @@ function MethodologyPage() {
             <strong>omitted from budget filtering</strong>, never priced at zero.
           </li>
           <li>
-            <strong>Saturation:</strong> AIME 2025's top sits at 100% and MathArena has frozen the
-            board (deprecated in favor of AIME 2026); GPQA Diamond's top sits near 95%. On ceiling
-            boards, tiny deltas are noise — Pick shows the board with a ceiling note rather than
-            pretending ordering is meaningful up there.
+            <strong>Ceilings:</strong> AIME 2026's top sits at 100%, so tiny deltas up there are
+            noise — the board carries a ceiling note rather than pretending ordering is meaningful.
+            SciCode's top (~43%) still differentiates.
           </li>
           <li>
-            <strong>Not an AA index, no AA private evals.</strong> Pick never claims the Artificial
-            Analysis Intelligence Index (40% of which is private), never scrapes AA, and never
-            uses AA-private boards (AA-Briefcase, GDP.pdf, Omniscience) as sub-intents.
+            <strong>Retired ≠ deleted:</strong> old boards may keep rows in D1 and buried{" "}
+            <code className="text-zinc-200">?benchmark=</code> URLs still resolve so links don't
+            404 — but they never appear in selectors, never default, and never get recommended.
+            There is no archive toggle on Pick.
+          </li>
+          <li>
+            <strong>Not an AA index, no AA private evals, no AA scrapes.</strong> Pick never claims
+            the Artificial Analysis Intelligence Index (40% of which is private) and never sources
+            from AA.
           </li>
         </ul>
         <p className="text-xs text-zinc-400 leading-relaxed">
-          Worked example (live D1): coding → budget $2/task → floor 50% → best under budget on the
+          Worked examples. Coding (live D1): budget $2/task → floor 50% → best under budget on the
           max-effort DeepSWE 1.1 slice returns <strong>GLM-5.3 Flash</strong> (mini-SWE-agent · max ·
           63.4% · $0.48/task · run{" "}
           <code className="text-zinc-200">01J8RUNDS6314BEDBMINISWEAG</code>), with DeepSeek V4 Flash
           (53.3% · $0.10/task) as the cheaper alternative and GPT-5.6 Luna (67.2% · $3.03/task)
-          flagged as the over-budget next step up.
+          flagged as the over-budget next step up. Math (snapshot): unlimited budget → floor 40%
+          returns <strong>Opus 4.8</strong> (AIME 2026 · max · 100.0%) via the cost tie-break at
+          $25/M output list price — the ceiling note applies.
         </p>
       </Section>
 

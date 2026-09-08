@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import * as React from "react";
 import { z } from "zod";
 import { Columns3 } from "lucide-react";
+import { isFreshBench } from "../domains/registry";
 import { getCompareData } from "../server/functions";
 import type { ExplorerRun } from "../server/functions";
 import { parseListParam } from "../compare";
@@ -192,7 +193,7 @@ function ComparePage() {
               aria-label="Benchmark version (single choice)"
               className="bg-zinc-900 border border-emerald-500/40 text-zinc-100 rounded px-2 py-1 text-xs focus:outline-none focus:border-emerald-500 font-mono cursor-pointer"
             >
-              {data.benchmarkOptions.map((b) => (
+              {data.benchmarkOptions.filter((b) => isFreshBench(b.id)).map((b) => (
                 <option key={b.id} value={b.id}>
                   {benchLabel(b)}
                 </option>

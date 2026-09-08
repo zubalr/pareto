@@ -85,7 +85,6 @@ export const getFinderData = createServerFn()
           (b) => b.id === data.benchmarkVersionId || b.benchmarkSlug === data.benchmarkVersionId
         ) ||
         benchmarkOptions.find((b) => b.benchmarkSlug === "deepswe" && b.version === "1.1") ||
-        benchmarkOptions.find((b) => b.benchmarkSlug === "terminal-bench" && b.version === "4.0") ||
         benchmarkOptions[0] ||
         null;
 
@@ -215,7 +214,6 @@ export const getModelData = createServerFn()
           (b) => b.id === data.benchmarkVersionId || b.benchmarkSlug === data.benchmarkVersionId
         ) ||
         benchmarkOptions.find((b) => b.benchmarkSlug === "deepswe" && b.version === "1.1") ||
-        benchmarkOptions.find((b) => b.benchmarkSlug === "terminal-bench" && b.version === "4.0") ||
         benchmarkOptions[0] ||
         null;
 
@@ -433,7 +431,7 @@ export const getCompareData = createServerFn()
         benchmarkOptions.find(
           (b) => b.id === data.benchmarkVersionId || b.benchmarkSlug === data.benchmarkVersionId
         ) ||
-        benchmarkOptions.find((b) => b.benchmarkSlug === "terminal-bench" && b.version === "4.0") ||
+        benchmarkOptions.find((b) => b.benchmarkSlug === "deepswe" && b.version === "1.1") ||
         benchmarkOptions[0] ||
         null;
 

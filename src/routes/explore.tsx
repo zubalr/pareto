@@ -8,6 +8,7 @@ import { PassAtKChart, EffortChart, ResourceChart } from "../components/ChartSlo
 import { DataTable } from "../components/DataTable";
 import { FilterRail, type EffortMatch, benchLabel } from "../components/FilterRail";
 import { parseDensity } from "../theme";
+import { D1_BOARDS, isFreshBench } from "../domains/registry";
 import { IngestHealthStrip } from "../components/IngestHealthStrip";
 import type { ExplorerRun, FilterOption } from "../server/functions";
 
@@ -301,6 +302,11 @@ function ExplorerPage() {
 
   const selectedBenchmarkId =
     search.benchmark || (data.currentBenchmark ? data.currentBenchmark.id : undefined);
+  // Phase 12 freshness law: the selector lists KEEP benches only. Buried
+  // ?benchmark= URLs for retired ids still resolve (the loader reads D1
+  // directly); they simply never appear as options and get a Retired chip.
+  const freshBenchmarks = data.benchmarkOptions.filter((b) => isFreshBench(b.id));
+  const activeFreshness = selectedBenchmarkId ? D1_BOARDS[selectedBenchmarkId] : undefined;
   const selectedModels = search.models ?? [];
   const selectedHarnesses = search.harnesses ?? [];
   const selectedEfforts = search.efforts ?? [];
@@ -532,6 +538,25 @@ function ExplorerPage() {
 
       <IngestHealthStrip />
 
+      {/* Phase 12 freshness chip: every visible board states its verified age */}
+      {activeFreshness ? (
+        activeFreshness.verdict === "keep" ? (
+          <div className="px-4 py-1 text-[11px] flex items-center gap-2 bg-emerald-950/60 text-emerald-400 border-b border-line">
+            <span className="font-bold uppercase tracking-wider">Updated</span>
+            <span className="font-mono">{activeFreshness.freshAsOf}</span>
+            <span className="text-mute">{activeFreshness.note}</span>
+          </div>
+        ) : (
+          <div className="px-4 py-1 text-[11px] flex items-center gap-2 bg-amber-950/60 text-amber-400 border-b border-line flex-wrap">
+            <span className="font-bold uppercase tracking-wider">Retired board</span>
+            <span>{activeFreshness.droppedBecause}</span>
+            <span className="text-mute">
+              Kept reachable via URL so links don&apos;t 404 — hidden from the selector.
+            </span>
+          </div>
+        )
+      ) : null}
+
       {/* Main Content: Filter Rail (drawer < lg) + Chart + Table */}
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">
         {railOpen && (
@@ -587,7 +612,7 @@ function ExplorerPage() {
             </button>
           </div>
         <FilterRail
-          benchmarks={data.benchmarkOptions}
+          benchmarks={freshBenchmarks}
           selectedBenchmarkId={selectedBenchmarkId}
           onSelectBenchmark={handleSelectBenchmark}
           models={orderedModels}

@@ -20,7 +20,9 @@ import {
   CODING_INTENTS,
   DEFAULT_FLOOR,
   DOMAIN_BOARD,
+  DROPPED_INTENT_REASON,
   INTENT_BENCH,
+  INTENT_LABELS,
   PICK_DOMAINS,
   comparableCodingSlice,
   costSemantics,
@@ -31,6 +33,12 @@ import {
   type PickObjective,
 } from "../pick";
 import { COMPILED_SOURCES, SNAPSHOT_RETRIEVED } from "../data/compiled-domain-scores";
+import {
+  D1_BOARDS,
+  FRESHNESS_CUTOFF,
+  FRESHNESS_VERIFIED,
+  SNAPSHOT_BOARDS,
+} from "../domains/registry";
 
 // ---------------------------------------------------------------------------
 // / is Pick (Phase 11): domain → budget → one configuration answer.
@@ -53,14 +61,14 @@ const LEGACY_EXPLORER_KEYS = [
 
 const searchSchema = z.object({
   domain: z.enum(["coding", "general", "math", "science"]).optional(),
-  // coding intents + the science sub-intent (gpqa)
-  intent: z.enum(["agentic", "terminal", "polyglot", "github", "gpqa"]).optional(),
+  // coding intents (terminal is an honest-empty chip — no fresh board yet)
+  intent: z.enum(["agentic", "terminal", "github"]).optional(),
   budget: z.string().optional(),
   floor: z.string().optional(),
   objective: z.enum(["best", "cheapest-floor", "min-resolved"]).optional(),
 });
 
-const ALL_INTENTS = [...CODING_INTENTS, "gpqa"] as const;
+const ALL_INTENTS = [...CODING_INTENTS] as const;
 
 export const Route = createFileRoute("/")({
   head: () => ({ title: "Pick · Pareto" }),
@@ -109,7 +117,9 @@ export const Route = createFileRoute("/")({
   }),
   loader: async ({ deps }): Promise<{ finder: FinderResponse | null }> => {
     if (deps.domain !== "coding") return { finder: null };
-    const intent = INTENT_BENCH[(deps.intent as CodingIntent) ?? "agentic"] ?? INTENT_BENCH.agentic;
+    // Terminal has no fresh board (Phase 12) — no D1 read, honest empty below.
+    const intent = INTENT_BENCH[(deps.intent as CodingIntent) ?? "agentic"];
+    if (!intent) return { finder: null };
     const finder = await getFinderData({
       data: {
         benchmarkVersionId: intent.id,
@@ -134,7 +144,7 @@ const DOMAIN_META: Record<
 > = {
   coding: {
     title: "Coding",
-    blurb: "Ship features, fix terminal tasks, close GitHub bugs — real $/task from measured agent runs.",
+    blurb: "Ship features and close GitHub bugs — real $/task from measured agent runs on fresh boards.",
     fieldClass: "domain-field-coding text-domain-coding",
     icon: <SquareCode size={22} />,
   },
@@ -146,16 +156,24 @@ const DOMAIN_META: Record<
   },
   math: {
     title: "Math",
-    blurb: "Competition math (AIME 2025, frozen snapshot). Contest %, not SWE solve rate.",
+    blurb: "Competition math on the live AIME 2026 board (AIME 2025 is retired). Contest %, not SWE solve.",
     fieldClass: "domain-field-math text-domain-math",
     icon: <Sigma size={22} />,
   },
   science: {
     title: "Science",
-    blurb: "Research-level scientific coding (SciCode) — and GPQA Diamond, saturated.",
+    blurb: "Research-level scientific coding (SciCode). GPQA Diamond is retired as saturated.",
     fieldClass: "domain-field-science text-domain-science",
     icon: <FlaskConical size={22} />,
   },
+};
+
+/** The verified freshness date for each domain's primary board (Updated chip). */
+const PRIMARY_FRESH: Record<PickDomain, string> = {
+  coding: D1_BOARDS["01J8BV000000000000DEEPSWE11"].freshAsOf ?? FRESHNESS_VERIFIED,
+  general: SNAPSHOT_BOARDS["mmlu-pro"].freshAsOf ?? FRESHNESS_VERIFIED,
+  math: SNAPSHOT_BOARDS["aime-2026"].freshAsOf ?? FRESHNESS_VERIFIED,
+  science: SNAPSHOT_BOARDS["scicode"].freshAsOf ?? FRESHNESS_VERIFIED,
 };
 
 function DomainCard({
@@ -169,6 +187,7 @@ function DomainCard({
 }) {
   const meta = DOMAIN_META[domain];
   const board = DOMAIN_BOARD[domain];
+  const freshAsOf = PRIMARY_FRESH[domain];
   return (
     <button
       type="button"
@@ -194,9 +213,17 @@ function DomainCard({
         </span>
       </span>
       <span className="text-[13px] text-mute leading-snug">{meta.blurb}</span>
-      <span className="text-[11px] font-mono text-mute mt-auto pt-1">
-        {board.primary}
-        {board.subIntents.length > 0 && ` · +${board.subIntents.length} sub-intent${board.subIntents.length > 1 ? "s" : ""}`}
+      <span className="flex items-center justify-between mt-auto pt-1">
+        <span className="text-[11px] font-mono text-mute">
+          {board.primary}
+          {board.subIntents.length > 0 && ` · +${board.subIntents.length} sub-intent${board.subIntents.length > 1 ? "s" : ""}`}
+        </span>
+        <span
+          className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-ground border border-line text-mute"
+          title={`Freshness law: boards must have published on/after ${FRESHNESS_CUTOFF} (verified ${FRESHNESS_VERIFIED})`}
+        >
+          updated {freshAsOf}
+        </span>
       </span>
     </button>
   );
@@ -286,6 +313,7 @@ function AnswerCard({
   budget,
   floor,
   objective,
+  freshAsOf,
 }: {
   domain: PickDomain;
   intent: CodingIntent;
@@ -295,6 +323,7 @@ function AnswerCard({
   budget: number | null;
   floor: number;
   objective: PickObjective;
+  freshAsOf: string;
 }) {
   const cs = costSemantics(domain);
   const intentInfo = INTENT_BENCH[intent];
@@ -311,6 +340,12 @@ function AnswerCard({
         </span>
         <span className="text-[11px] font-mono text-mute">
           {benchLabel} · floor {floor}% · {budget === null ? "budget unlimited" : `budget ${fmtMoney(budget)} ${cs.unit}`}
+          {" · "}
+          <span
+            title={`Freshness law: boards must have published on/after ${FRESHNESS_CUTOFF} (verified ${FRESHNESS_VERIFIED})`}
+          >
+            updated {freshAsOf}
+          </span>
         </span>
       </div>
 
@@ -494,7 +529,10 @@ function PickPage() {
 
   // ---------------- active domain ----------------
   const isCoding = domain === "coding";
-  const scienceSub = domain === "science" && search.intent === "gpqa" ? "gpqa" : undefined;
+  const droppedReason = isCoding ? DROPPED_INTENT_REASON[intent] : undefined;
+  const activeFresh = isCoding
+    ? (INTENT_BENCH[intent] ? D1_BOARDS[INTENT_BENCH[intent]!.id]?.freshAsOf : undefined) ?? FRESHNESS_VERIFIED
+    : PRIMARY_FRESH[domain];
 
   const budgetRaw = search.budget ?? "inf";
   const budget = budgetRaw === "inf" || budgetRaw === "" ? null : Number(budgetRaw);
@@ -506,14 +544,12 @@ function PickPage() {
 
   const slice: FinderCandidate[] = isCoding
     ? comparableCodingSlice(data.finder?.candidates ?? [], intent)
-    : pickSliceCandidates(domain, scienceSub);
+    : pickSliceCandidates(domain);
 
   const answer = pickFromCandidates(slice, { budget, floor, objective }, { hasTaskCost: isCoding });
   const benchLabel = isCoding
     ? INTENT_BENCH[intent]?.bench ?? DOMAIN_BOARD.coding.primary
-    : scienceSub
-      ? "GPQA Diamond (saturated)"
-      : DOMAIN_BOARD[domain].primary;
+    : DOMAIN_BOARD[domain].primary;
 
   const why = (() => {
     if (!answer.best) return "";
@@ -524,7 +560,7 @@ function PickPage() {
         return `Lowest cost per resolved task on the ${benchLabel} slice under your cap — total run cost ÷ resolved tasks. Read it next to the solve rate: it hides failures.`;
       return `Highest solve rate on ${benchLabel} among ${INTENT_BENCH[intent]?.effortMatch === "max" ? "max-effort (matched) " : ""}runs under ${budget === null ? "an unlimited budget" : `${fmtMoney(budget)}/task`} that clear the ${floor}% floor. Same-bench, same-effort — that is what makes it comparable.`;
     }
-    const benchKey = scienceSub ? "gpqa-diamond" : DOMAIN_BOARD[domain].benchKey;
+    const benchKey = DOMAIN_BOARD[domain].benchKey;
     return `Highest published ${benchKey} score among compiled rows ${budget === null ? "" : `with list price ≤ ${fmtMoney(budget)}/M output `}that clear the ${floor}% floor. Price is OpenRouter list $/M output — a proxy, not $/task.`;
   })();
 
@@ -548,14 +584,15 @@ function PickPage() {
           {isCoding ? (
             <span>
               Official leaderboard ingests — measured $/task, reported basis. Answer links to its
-              one benchmark version.
+              one benchmark version. Freshness law: boards retired before {FRESHNESS_CUTOFF} are
+              not recommended.
             </span>
           ) : (
             <span>
               Compiled from public leaderboards on {SNAPSHOT_RETRIEVED} — not a daily feed. Budget
               uses OpenRouter list $/M output: <strong>a price proxy, never $/task</strong>. Rows
               without a list price are omitted, never priced at zero.
-              {(domain === "math" || scienceSub === "gpqa") &&
+              {domain === "math" &&
                 " Top of this board sits at the ceiling — deltas up there are noise, not signal."}
             </span>
           )}
@@ -570,7 +607,19 @@ function PickPage() {
         <div className="flex flex-col lg:flex-row gap-5">
           {/* Mobile: answer card first (order-first), controls after */}
           <div className="flex-1 flex flex-col gap-3 order-first lg:order-none">
-            {answer.best ? (
+            {droppedReason ? (
+              <div className="bg-surface border border-warn/60 rounded-xl p-6 flex flex-col gap-2">
+                <span className="text-lg font-bold text-ink">
+                  No fresh {INTENT_LABELS[intent].replace(" (no fresh board yet)", "")} board — yet.
+                </span>
+                <span className="text-[13px] text-mute leading-relaxed">{droppedReason}</span>
+                <span className="text-[11px] text-mute">
+                  Freshness law: only boards whose upstream last published on/after{" "}
+                  {FRESHNESS_CUTOFF} are recommended. This chip returns the day an official board
+                  lands in D1.
+                </span>
+              </div>
+            ) : answer.best ? (
               <>
                 <AnswerCard
                   domain={domain}
@@ -581,6 +630,7 @@ function PickPage() {
                   budget={budget}
                   floor={floor}
                   objective={objective}
+                  freshAsOf={activeFresh}
                 />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {answer.cheaper && (
@@ -610,7 +660,7 @@ function PickPage() {
                 </span>
               </div>
             )}
-            {answer.omitted.noPrice > 0 && (
+            {!droppedReason && answer.omitted.noPrice > 0 && (
               <p className="text-[11px] text-mute">
                 Coverage: {answer.omitted.noPrice} row(s) omitted for missing {isCoding ? "cost telemetry" : "list price"} —
                 missing data is never coerced into budget.
@@ -626,36 +676,30 @@ function PickPage() {
                   What kind of coding?
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {CODING_INTENTS.map((i) => (
-                    <Chip key={i} active={i === intent} onClick={() => update({ intent: i === "agentic" ? undefined : i, budget: undefined })}>
-                      {INTENT_BENCH[i].label}
-                    </Chip>
-                  ))}
+                  {CODING_INTENTS.map((i) => {
+                    const dropped = Boolean(DROPPED_INTENT_REASON[i]);
+                    return (
+                      <Chip
+                        key={i}
+                        active={i === intent}
+                        onClick={() => update({ intent: i === "agentic" ? undefined : i, budget: undefined })}
+                        title={DROPPED_INTENT_REASON[i]}
+                      >
+                        {dropped ? "⚠ " : ""}
+                        {INTENT_LABELS[i]}
+                      </Chip>
+                    );
+                  })}
                 </div>
                 <p className="text-[11px] text-mute">
-                  {INTENT_BENCH[intent]?.bench} ·{" "}
-                  {INTENT_BENCH[intent]?.effortMatch === "max"
-                    ? "matched at max effort (xhigh shown as the spend-more step)"
-                    : "all efforts shown on each answer"}
+                  {INTENT_BENCH[intent]
+                    ? `${INTENT_BENCH[intent]!.bench} · ${
+                        INTENT_BENCH[intent]!.effortMatch === "max"
+                          ? "matched at max effort (xhigh shown as the spend-more step)"
+                          : "all efforts shown on each answer"
+                      }`
+                    : DROPPED_INTENT_REASON[intent]}
                 </p>
-              </div>
-            )}
-
-            {domain === "science" && (
-              <div className="flex flex-col gap-2">
-                <span className="text-[11px] uppercase tracking-wider font-bold text-mute">Sub-intent</span>
-                <div className="flex flex-wrap gap-1.5">
-                  <Chip active={!scienceSub} onClick={() => update({ intent: undefined })}>
-                    SciCode
-                  </Chip>
-                  <Chip
-                    active={scienceSub === "gpqa"}
-                    onClick={() => update({ intent: "gpqa" })}
-                    title="GPQA Diamond is saturated (~95% top) — AA retired it from its Index"
-                  >
-                    GPQA Diamond (saturated)
-                  </Chip>
-                </div>
               </div>
             )}
 

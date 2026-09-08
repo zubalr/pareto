@@ -19,7 +19,7 @@ import {
 
 export type PickDomain = "coding" | "general" | "math" | "science";
 export type PickObjective = "best" | "cheapest-floor" | "min-resolved";
-export type CodingIntent = "agentic" | "terminal" | "polyglot" | "github";
+export type CodingIntent = "agentic" | "terminal" | "github";
 
 export const PICK_DOMAINS: PickDomain[] = ["coding", "general", "math", "science"];
 
@@ -46,47 +46,55 @@ export interface DomainBoard {
   benchKey?: CompiledBenchKey;
 }
 
-/** The domain → bench map. Do not improvise (DESIGN.md §Pick). */
+/** The domain → bench map (Phase 12: freshness law applied). Do not improvise. */
 export const DOMAIN_BOARD: Record<PickDomain, DomainBoard> = {
   coding: {
     primary: "DeepSWE 1.1",
-    subIntents: ["Harbor TB 2.0", "Aider Polyglot", "SWE-bench Verified"],
+    subIntents: ["Terminal (no fresh board yet)", "SWE-bench Verified"],
     basis: "live-d1",
   },
   general: {
     primary: "MMLU-Pro",
-    subIntents: [], // IFEval is not in the compiled snapshot yet
+    subIntents: [],
     basis: "snapshot",
     benchKey: "mmlu-pro",
   },
   math: {
-    primary: "AIME 2025",
+    primary: "AIME 2026",
     subIntents: [],
     basis: "snapshot",
-    benchKey: "aime-2025",
+    benchKey: "aime-2026",
   },
   science: {
     primary: "SciCode",
-    subIntents: ["GPQA Diamond (saturated)"],
+    subIntents: [], // GPQA Diamond thrown: retired as saturated
     basis: "snapshot",
     benchKey: "scicode",
   },
 };
 
-/** Science sub-intent → its own snapshot board. */
-export const SUBINTENT_BENCH: Partial<Record<PickDomain, Record<string, CompiledBenchKey>>> = {
-  science: { gpqa: "gpqa-diamond" },
-};
-
-/** Coding intent → live D1 benchmark version. Primary board is DeepSWE 1.1. */
-export const INTENT_BENCH: Record<CodingIntent, { id: string; label: string; bench: string; effortMatch: "max" | "all" }> = {
+/** Coding intents after the Phase 12 throws. `terminal` has NO board: the
+ *  official Terminal-Bench 4.0 is not ingested (the seed rows are not it) and
+ *  Harbor TB 2.0 is superseded — so it renders an honest empty chip, never a
+ *  stale board. Polyglot is omitted outright (upstream YAML stale). */
+export const INTENT_BENCH: Partial<Record<CodingIntent, { id: string; label: string; bench: string; effortMatch: "max" | "all" }>> = {
   agentic: { id: "01J8BV000000000000DEEPSWE11", label: "Agentic SWE", bench: "DeepSWE 1.1", effortMatch: "max" },
-  terminal: { id: "01J8BV000000000000000TB20", label: "Terminal", bench: "Harbor TB 2.0", effortMatch: "all" },
-  polyglot: { id: "01J8BVAIDER00000000000POLY", label: "Polyglot", bench: "Aider Polyglot 1.0", effortMatch: "all" },
   github: { id: "01J8BV000000000000000SWE10", label: "GitHub bugs", bench: "SWE-bench Verified 1.0", effortMatch: "all" },
 };
 
-export const CODING_INTENTS: CodingIntent[] = ["agentic", "terminal", "polyglot", "github"];
+export const CODING_INTENTS: CodingIntent[] = ["agentic", "terminal", "github"];
+
+/** Intent chips that render but hold no board (dropped with a reason). */
+export const DROPPED_INTENT_REASON: Partial<Record<CodingIntent, string>> = {
+  terminal:
+    "No fresh Terminal board yet — the official Terminal-Bench 4.0 is not ingested (the seed rows are not it) and Harbor TB 2.0 is superseded.",
+};
+
+export const INTENT_LABELS: Record<CodingIntent, string> = {
+  agentic: "Agentic SWE",
+  terminal: "Terminal (no fresh board yet)",
+  github: "GitHub bugs",
+};
 
 /** Cost semantics chip — the proxy rule lives here so UI and tests agree. */
 export function costSemantics(domain: PickDomain): {
@@ -277,12 +285,12 @@ export function pickFromCandidates<T extends FinderCandidate>(
   };
 }
 
-/** Builds the snapshot candidate slice for a domain (and optional sub-intent). */
+/** Builds the snapshot candidate slice for a domain (sub-intents removed in
+ *  Phase 12 — GPQA thrown; kept for signature stability). */
 export function pickSliceCandidates(
   domain: Exclude<PickDomain, "coding">,
-  subIntent?: string
+  _subIntent?: string
 ): FinderCandidate[] {
-  const bench =
-    (subIntent && SUBINTENT_BENCH[domain]?.[subIntent]) || DOMAIN_BOARD[domain].benchKey;
+  const bench = DOMAIN_BOARD[domain].benchKey;
   return snapshotCandidates(bench as CompiledBenchKey);
 }

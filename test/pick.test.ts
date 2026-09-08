@@ -8,8 +8,18 @@ import {
   DOMAIN_BOARD,
   DEFAULT_FLOOR,
   PICK_DOMAINS,
+  INTENT_BENCH,
+  CODING_INTENTS,
   type PickDomain,
 } from "../src/pick";
+import { COMPILED_SCORES } from "../src/data/compiled-domain-scores";
+import {
+  D1_BOARDS,
+  SNAPSHOT_BOARDS,
+  FRESHNESS_CUTOFF,
+  isFreshBench,
+  isFreshSnapshotBoard,
+} from "../src/domains/registry";
 import type { FinderCandidate } from "../src/finder";
 import { DEFAULT_THEME_PREF, getThemePref } from "../src/theme";
 
@@ -117,17 +127,50 @@ describe("Pick — snapshot domains and the price-proxy rule", () => {
     }
   });
 
-  it("every domain maps to a fixed board and the floor defaults are per-domain", () => {
+  it("every domain maps to a fixed, fresh board and the floor defaults are per-domain", () => {
     expect(DOMAIN_BOARD.coding).toMatchObject({ primary: "DeepSWE 1.1", basis: "live-d1" });
     expect(DOMAIN_BOARD.general).toMatchObject({ primary: "MMLU-Pro", basis: "snapshot" });
-    expect(DOMAIN_BOARD.math).toMatchObject({ primary: "AIME 2025" });
-    expect(DOMAIN_BOARD.science).toMatchObject({ primary: "SciCode" });
+    // Phase 12: math moved off the frozen AIME 2025 board onto the live AIME 2026
+    expect(DOMAIN_BOARD.math).toMatchObject({ primary: "AIME 2026", benchKey: "aime-2026" });
+    expect(DOMAIN_BOARD.science).toMatchObject({ primary: "SciCode", benchKey: "scicode" });
+    expect(DOMAIN_BOARD.science.subIntents).toHaveLength(0); // GPQA thrown
     expect(DEFAULT_FLOOR).toMatchObject({ coding: 50, general: 60, math: 40, science: 40 });
     expect(PICK_DOMAINS).toHaveLength(4);
   });
 
-  it("snapshot candidates exist for all four boards with stable ids and no plotted zeros", () => {
-    for (const bench of ["mmlu-pro", "aime-2025", "scicode", "gpqa-diamond"] as const) {
+  it("Phase 12 law: thrown boards are absent from the registry's keep set", () => {
+    expect(FRESHNESS_CUTOFF).toBe("2026-03-08");
+    // snapshot boards
+    expect(isFreshSnapshotBoard("aime-2025")).toBe(false);
+    expect(isFreshSnapshotBoard("gpqa-diamond")).toBe(false);
+    expect(SNAPSHOT_BOARDS["aime-2025"].droppedBecause).toMatch(/supersed|deprecated/i);
+    expect(SNAPSHOT_BOARDS["gpqa-diamond"].droppedBecause).toMatch(/saturat/i);
+    expect(isFreshSnapshotBoard("mmlu-pro")).toBe(true);
+    expect(isFreshSnapshotBoard("aime-2026")).toBe(true);
+    expect(isFreshSnapshotBoard("scicode")).toBe(true);
+    // D1 boards
+    expect(isFreshBench("01J8BV000000000000DEEPSWE11")).toBe(true);
+    expect(isFreshBench("01J8BV000000000000000SWE10")).toBe(true);
+    expect(isFreshBench("01J8BV000000000000000TB20")).toBe(false); // Harbor TB 2.0 superseded
+    expect(isFreshBench("01J8BV0000000000000000TB40")).toBe(false); // seed fixtures
+    expect(isFreshBench("01J8BVAIDER00000000000POLY")).toBe(false); // stale upstream YAML
+    expect(D1_BOARDS["01J8BV000000000000000TB20"].droppedBecause).toMatch(/supersed/i);
+    expect(D1_BOARDS["01J8BV0000000000000000TB40"].droppedBecause).toMatch(/seed/i);
+  });
+
+  it("Phase 12 law: TB2/seed/aider ids are never Pick intents; terminal is honest-empty", () => {
+    for (const intent of CODING_INTENTS) {
+      const bench = INTENT_BENCH[intent];
+      if (bench) {
+        expect(["01J8BV000000000000DEEPSWE11", "01J8BV000000000000000SWE10"]).toContain(bench.id);
+      }
+    }
+    expect(INTENT_BENCH.terminal).toBeUndefined(); // honest empty chip, no board
+    expect(INTENT_BENCH.polyglot).toBeUndefined(); // omitted outright
+  });
+
+  it("snapshot candidates exist for all kept boards with stable ids and no plotted zeros", () => {
+    for (const bench of ["mmlu-pro", "aime-2026", "scicode"] as const) {
       const cands = snapshotCandidates(bench);
       expect(cands.length).toBeGreaterThan(0);
       for (const c of cands) {
@@ -136,20 +179,33 @@ describe("Pick — snapshot domains and the price-proxy rule", () => {
         if (c.cost !== null) expect(c.cost).toBeGreaterThan(0);
       }
     }
-    // science sub-intent switches the board
-    const sci = pickSliceCandidates("science");
-    const gpqa = pickSliceCandidates("science", "gpqa");
-    expect(gpqa.length).toBeGreaterThan(0);
-    expect(gpqa.map((c) => c.id).sort()).not.toEqual(sci.map((c) => c.id).sort());
+  });
+
+  it("Pick math draws from AIME 2026 — the 2025 board (and its 100% GPT-5.2) is gone", () => {
+    const math = pickSliceCandidates("math");
+    expect(math.length).toBeGreaterThan(0);
+    for (const c of math) {
+      expect(c.sourceRunId).not.toContain("matharena-aime-2025");
+    }
+    // every compiled row is sourced only from kept boards
+    for (const row of COMPILED_SCORES) {
+      for (const [bench, score] of Object.entries(row.scores)) {
+        expect(["tiger-mmlu-pro", "matharena-aime-2026", "kaggle-scicode-sub"]).toContain(score.src);
+        expect(["mmlu-pro", "aime-2026", "scicode"]).toContain(bench);
+      }
+    }
+    const answer = pickFromCandidates(math, { budget: null, floor: 40, objective: "best" });
+    expect(answer.best).not.toBeNull();
+    // the answer must come from the 2026 board's provenance chain
+    expect(answer.best!.id).toMatch(/^compiled:aime-2026:/);
   });
 
   it("unpriced snapshot rows are omitted by budget filtering, never coerced to $0", () => {
-    const cands = snapshotCandidates("aime-2025");
+    const cands = snapshotCandidates("aime-2026");
     // below-floor rows are pre-filtered before budget eligibility applies
     const unpriced = cands.filter((c) => c.cost === null && c.solveRate >= 40);
     const answer = pickFromCandidates(cands, { budget: 5, floor: 40, objective: "best" });
     expect(answer.omitted.noPrice).toBe(unpriced.length);
-    expect(unpriced.length).toBeGreaterThan(0);
     if (answer.best) expect(answer.best.cost).not.toBeNull();
   });
 

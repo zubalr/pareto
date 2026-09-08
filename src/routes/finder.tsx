@@ -4,6 +4,7 @@ import { z } from "zod";
 import { CircleDollarSign, Timer, Target, X, SlidersHorizontal } from "lucide-react";
 import { getFinderData } from "../server/functions";
 import { selectFinder, FinderObjective } from "../finder";
+import { D1_BOARDS, isFreshBench } from "../domains/registry";
 
 const searchSchema = z.object({
   benchmark: z.string().optional(),
@@ -171,6 +172,10 @@ function FinderPage() {
   const [railOpen, setRailOpen] = React.useState(false);
 
   const benchmarkId = search.benchmark || data.currentBenchmark?.id || "";
+  // Phase 12 freshness law: fresh benches only in the selector; a buried URL
+  // for a retired id still works but says so.
+  const freshBenchmarks = data.benchmarkOptions.filter((b) => isFreshBench(b.id));
+  const activeFreshness = benchmarkId ? D1_BOARDS[benchmarkId] : undefined;
   const maxCost = search.maxCost ?? "50";
   const maxLatency = search.maxLatency ?? "";
   const minSolve = search.minSolve ?? "";
@@ -244,6 +249,14 @@ function FinderPage() {
         </div>
       </div>
 
+      {activeFreshness && activeFreshness.verdict === "throw" && (
+        <div className="px-4 py-1 text-[11px] flex items-center gap-2 bg-amber-950/60 text-amber-400 border-b border-line flex-wrap">
+          <span className="font-bold uppercase tracking-wider">Retired board</span>
+          <span>{activeFreshness.droppedBecause}</span>
+          <span className="text-mute">Kept reachable via URL — hidden from the selector.</span>
+        </div>
+      )}
+
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">
         {railOpen && (
           <div
@@ -283,7 +296,7 @@ function FinderPage() {
               aria-label="Benchmark version (required, single choice)"
               className="w-full bg-zinc-900 border border-emerald-500/40 hover:border-emerald-500/70 text-zinc-100 rounded px-2 py-1.5 text-xs focus:outline-none focus:border-emerald-500 font-mono cursor-pointer"
             >
-              {data.benchmarkOptions.map((b) => (
+              {freshBenchmarks.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.displayLabel}
                 </option>

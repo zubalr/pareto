@@ -1,13 +1,10 @@
-# Pareto — benchmark cost vs solve intelligence
+# Pareto
 
-[![Live board](https://img.shields.io/badge/live-board-10b981)](https://pareto.jubairjashim1975.workers.dev)
-[![Today basis](https://img.shields.io/badge/cost-reported_%7C_today-06b6d4)](https://pareto.jubairjashim1975.workers.dev/?costBasis=today)
+**Abandoned.** This project is not deployed. On 2026-09-09 the Cloudflare Worker, D1 database (`pareto-catalog`), and KV namespace (`pareto-frontier`) were deleted. The daily ingest cron is gone. There is no live board.
 
-A bright, light-first product that answers one question in ten seconds:
-**what should you run, at what effort, and what does it cost?** — with the full
-Pareto frontier board one click away for operators.
+Do not `wrangler deploy` this repo. That would create a new Worker and start using quota again.
 
-Live: **https://pareto.jubairjashim1975.workers.dev**
+What follows is a snapshot of the last local tree (Phase 12).
 
 ## Pick — the front door
 
